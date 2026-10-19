@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+*.local
+.pnpm-store/
+.vercel/
+.codegraph/
+.atl/
+.vscode/
+.idea/
+.env
+.env.*
+!.env.example
+.DS_Store

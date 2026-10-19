@@ -1,0 +1,13 @@
+{
+  "name": "ernestina-silva",
+  "private": true,
+  "packageManager": "pnpm@12.13.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @ernestina-silva/web dev",
+    "dev:api": "pnpm --filter @ernestina-silva/api start:dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm --filter @ernestina-silva/api test",
+    "test:e2e": "pnpm --filter @ernestina-silva/api test:e2e"
+  }
+}
