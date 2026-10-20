@@ -79,15 +79,3 @@ export function withChampionshipParam(
   else nextSearchParams.delete('campeonato')
   return nextSearchParams
 }
-
-// Keep the current App consumer compatible until the Router integration lands.
-export type Page = 'home' | 'matches' | 'championships' | 'admin' | 'not-found'
-
-export function pageForPath(pathname: string): Page {
-  const path = pathname.replace(/\/+$/, '') || '/'
-  if (path === '/admin') return 'admin'
-  if (path === '/') return 'home'
-  if (path === '/partidos') return 'matches'
-  if (path === '/campeonatos') return 'championships'
-  return 'not-found'
-}

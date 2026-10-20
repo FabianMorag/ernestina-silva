@@ -1,11 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import {
-  adminPageForPath,
-  rosterForChampionship,
-  unassignedPlayers,
-} from './admin-navigation.ts'
-import { pageForPath } from './routes.ts'
+import { rosterForChampionship, unassignedPlayers } from './admin-navigation.ts'
 import type { Participant, Player } from './tournament-api.ts'
 
 const players: Player[] = [
@@ -31,18 +26,6 @@ const participants: Participant[] = [
     team: { id: 'milan', name: 'Milan' },
   },
 ]
-
-test('admin sections have direct URLs without changing public route handling', () => {
-  assert.equal(adminPageForPath('/admin'), 'championships')
-  assert.equal(adminPageForPath('/admin/jugadores/'), 'players')
-  assert.equal(adminPageForPath('/admin/equipos'), 'teams')
-  assert.equal(adminPageForPath('/admin/campeonatos'), 'championships')
-  assert.equal(adminPageForPath('/admin/partidos'), 'matches')
-  assert.equal(adminPageForPath('/admin/desconocido'), 'not-found')
-  assert.equal(adminPageForPath('/partidos'), null)
-  assert.equal(pageForPath('/partidos'), 'matches')
-  assert.equal(pageForPath('/campeonatos'), 'championships')
-})
 
 test('each championship roster includes only its assigned players and teams', () => {
   assert.deepEqual(rosterForChampionship(participants, 'cup'), [

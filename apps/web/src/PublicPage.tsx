@@ -6,13 +6,13 @@ import {
   Swords,
   Trophy,
 } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router'
 import useSWR from 'swr'
 import {
   championshipSummaries,
   matchesForChampionship,
   type ChampionshipSummary,
 } from './championships.ts'
-import type { Page } from './routes.ts'
 import {
   request,
   stageLabel,
@@ -22,7 +22,7 @@ import {
 } from './tournament-api.ts'
 import './public.css'
 
-type PublicRoute = Exclude<Page, 'admin'>
+type PublicRoute = 'home' | 'matches' | 'championships' | 'not-found'
 
 function ChampionshipList({
   championships,
@@ -65,13 +65,13 @@ function ChampionshipList({
               )}
             </div>
           </div>
-          <a
+          <Link
             className="public-action"
-            href={`/partidos?campeonato=${encodeURIComponent(championship.id)}`}
+            to={`/partidos?campeonato=${encodeURIComponent(championship.id)}`}
             aria-label={`Ver partidos de ${championship.name}`}
           >
             Ver partidos <ArrowRight aria-hidden="true" />
-          </a>
+          </Link>
         </article>
       ))}
     </div>
@@ -113,6 +113,7 @@ function MatchList({ matches }: { matches: Match[] }) {
 }
 
 export function PublicPage({ page }: { page: PublicRoute }) {
+  const [searchParams] = useSearchParams()
   const {
     data: matches = [],
     error: matchesError,
@@ -131,10 +132,7 @@ export function PublicPage({ page }: { page: PublicRoute }) {
   const error = matchesError || championshipsError || stagesError
   const loading = matchesLoading || championshipsLoading || stagesLoading
   const summaries = championshipSummaries(championships, matches, stages)
-  const selectedId =
-    page === 'matches'
-      ? new URLSearchParams(window.location.search).get('campeonato')
-      : null
+  const selectedId = page === 'matches' ? searchParams.get('campeonato') : null
   const selectedChampionship = selectedId
     ? championships.find((item) => item.id === selectedId)
     : undefined
@@ -145,7 +143,7 @@ export function PublicPage({ page }: { page: PublicRoute }) {
     <main className="public-shell">
       <header className="public-header">
         <div className="public-container public-header-inner">
-          <a href="/" className="public-brand">
+          <Link to="/" className="public-brand">
             <span className="public-brand-mark">
               <Trophy aria-hidden="true" />
             </span>
@@ -153,26 +151,26 @@ export function PublicPage({ page }: { page: PublicRoute }) {
               <small>CAMPEONATO DE FIFA</small>
               <strong>Ernestina Silva</strong>
             </span>
-          </a>
+          </Link>
           <nav aria-label="Navegación principal" className="public-nav">
-            <a aria-current={page === 'home' ? 'page' : undefined} href="/">
+            <Link aria-current={page === 'home' ? 'page' : undefined} to="/">
               Inicio
-            </a>
-            <a
+            </Link>
+            <Link
               aria-current={page === 'championships' ? 'page' : undefined}
-              href="/campeonatos"
+              to="/campeonatos"
             >
               Campeonatos
-            </a>
-            <a
+            </Link>
+            <Link
               aria-current={page === 'matches' ? 'page' : undefined}
-              href="/partidos"
+              to="/partidos"
             >
               Partidos
-            </a>
-            <a className="public-admin-link" href="/admin">
+            </Link>
+            <Link className="public-admin-link" to="/admin">
               <ShieldCheck aria-hidden="true" /> Administración
-            </a>
+            </Link>
           </nav>
         </div>
       </header>
@@ -182,9 +180,9 @@ export function PublicPage({ page }: { page: PublicRoute }) {
           <p className="public-eyebrow">ERROR 404</p>
           <h1>Página no encontrada</h1>
           <p>Esta ruta no existe.</p>
-          <a className="public-back" href="/">
+          <Link className="public-back" to="/">
             <ArrowLeft aria-hidden="true" /> Volver al inicio
-          </a>
+          </Link>
         </section>
       ) : (
         <div className="public-container public-content">
@@ -255,9 +253,9 @@ export function PublicPage({ page }: { page: PublicRoute }) {
               ))}
           </section>
           {page === 'matches' && selectedChampionship && (
-            <a className="public-back" href="/">
+            <Link className="public-back" to="/">
               <ArrowLeft aria-hidden="true" /> Volver a campeonatos
-            </a>
+            </Link>
           )}
         </div>
       )}
