@@ -9,7 +9,7 @@ Branch: feat/tournament-admin. Delivery: exception-ok (user requested no line-co
 - S4 (existing behavior to preserve): match entry/history and optional stages remain available, and all public routes and admin authentication retain their prior behavior. Assumption: match entry gets its own admin page; stages stay with championships.
 
 ## Tasks
-- T1 (S1-S4): inline; verified; separate admin navigation/pages and scoped roster workflow with tests and docs; work-unit commit pending.
+- T1 (S1-S4): inline; complete; separate admin navigation/pages and scoped roster workflow with tests and docs; commit ccb5a58.
 
 ## Log
 - L1 (2026-10-20), user's original request verbatim:
@@ -18,3 +18,4 @@ Branch: feat/tournament-admin. Delivery: exception-ok (user requested no line-co
 
 - L2: Existing ChampionshipParticipant uniquely links championship and player to a team. The backend already rejects matches that do not use those assignments. Current App.tsx renders every admin form on /admin, with no section navigation. No backend/schema change is required for the requested separation.
 - L3: Added direct admin URLs for Jugadores, Equipos, Campeonatos, and Partidos. Championship rosters filter participants and team assignments; match options use the same filtered roster. Native links preserve public routing. RED: web test failed because admin-navigation.ts did not exist. GREEN: web tests 7/7, build and lint passed. Independent verifier found no blocker, exercised mocked browser admin flows at 390px and 1280px, and API unit tests 17/17. Actual database transaction behavior was not retested because API logic was unchanged. Standard API production build was intentionally skipped while the live Nest watcher shares dist. RDD is globally off.
+- L4: T1 work-unit commit ccb5a58. Frontend routes and roster behavior are verified; no source changes remain after the work-unit commit.
