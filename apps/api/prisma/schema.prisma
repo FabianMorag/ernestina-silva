@@ -1,0 +1,89 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AdminUser {
+  id           String         @id @default(cuid())
+  username     String         @unique
+  passwordHash String
+  developmentOnly Boolean @default(false)
+  sessions     AdminSession[]
+  createdAt    DateTime       @default(now())
+}
+
+model AdminSession {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  userId    String
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  homeGames Match[]  @relation("HomePlayer")
+  awayGames Match[]  @relation("AwayPlayer")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  homeGames Match[]  @relation("HomeTeam")
+  awayGames Match[]  @relation("AwayTeam")
+}
+
+model Championship {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  stages    Stage[]
+  matches   Match[]
+}
+
+enum StageKind {
+  GROUP
+  LEAGUE
+  KNOCKOUT
+}
+
+model Stage {
+  id             String       @id @default(cuid())
+  name           String
+  kind           StageKind
+  championshipId String
+  championship   Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  matches        Match[]
+
+  @@unique([championshipId, name])
+}
+
+model Match {
+  id             String       @id @default(cuid())
+  playedAt       DateTime?
+  homeScore      Int
+  awayScore      Int
+  championshipId String
+  stageId        String?
+  homePlayerId   String
+  awayPlayerId   String
+  homeTeamId     String
+  awayTeamId     String
+  championship   Championship @relation(fields: [championshipId], references: [id])
+  stage          Stage?       @relation(fields: [stageId], references: [id])
+  homePlayer     Player       @relation("HomePlayer", fields: [homePlayerId], references: [id])
+  awayPlayer     Player       @relation("AwayPlayer", fields: [awayPlayerId], references: [id])
+  homeTeam       Team         @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam       Team         @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@index([championshipId])
+  @@index([stageId])
+}
