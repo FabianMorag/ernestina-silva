@@ -96,6 +96,10 @@ describe('AppController (e2e)', () => {
     }
     const denied = await app.inject({ method: 'POST', url: '/admin/players', payload: { name: 'Player' } });
     expect(denied.statusCode).toBe(401);
+    const deniedEdit = await app.inject({ method: 'PATCH', url: '/admin/players/player', payload: { name: 'Edited' } });
+    expect(deniedEdit.statusCode).toBe(401);
+    const deniedAssignment = await app.inject({ method: 'POST', url: '/admin/participants', payload: { championshipId: 'championship', playerId: 'player', teamId: 'team' } });
+    expect(deniedAssignment.statusCode).toBe(401);
   });
 
   afterEach(async () => {

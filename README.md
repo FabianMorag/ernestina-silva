@@ -27,9 +27,17 @@ Apply the checked-in migrations before starting the API:
 pnpm --filter @ernestina-silva/api exec prisma migrate deploy
 ```
 
-With `ENABLE_LOCAL_ADMIN=true` in the API `.env`, an empty local database gets a temporary `admin` / `admin` account. This account cannot sign in when `NODE_ENV=production`, even if the database is reused. Public pages at `/`, `/partidos`, and `/campeonatos` require no account. Sign in at `/admin` to add players, teams, championships, optional stages, and match results. Do not use the temporary account for deployed environments.
+Load the 12 initial players with their optional titles:
 
-Public read-only API routes are `GET /tournament/players`, `/tournament/teams`, `/tournament/championships`, `/tournament/stages`, and `/tournament/matches`. Data-entry routes remain under `/admin/*` and require an admin session.
+```sh
+pnpm --filter @ernestina-silva/api exec prisma db seed
+```
+
+The player seed is safe to rerun: fixed player IDs prevent duplicates and existing names or titles are never overwritten. Teams are not seeded because their names have not been provided yet.
+
+With `ENABLE_LOCAL_ADMIN=true` in the API `.env`, an empty local database gets a temporary `admin` / `admin` account. This account cannot sign in when `NODE_ENV=production`, even if the database is reused. Public pages at `/`, `/partidos`, and `/campeonatos` require no account. Sign in at `/admin` to edit player names and optional titles, add teams and championships, assign one team per player per championship, add optional stages, and record results. A player's assigned team can differ between championships; recorded matches must use that assignment. Do not use the temporary account for deployed environments.
+
+Public read-only API routes are `GET /tournament/players`, `/tournament/teams`, `/tournament/championships`, `/tournament/stages`, and `/tournament/matches`. Data-entry routes remain under `/admin/*` and require an admin session. Player edits use `PATCH /admin/players/:id`; championship assignments use `GET` and `POST /admin/participants`.
 
 In Swagger UI at `http://localhost:3000/docs`, open `POST /auth/login`, select **Try it out**, enter the local credentials, and execute. The browser stores the HttpOnly session cookie; subsequent protected requests in the same Swagger tab use that session. Do not enter the cookie manually in **Authorize**: browsers do not let Swagger UI set the `Cookie` header.
 
@@ -54,6 +62,8 @@ pnpm lint
 pnpm test
 pnpm test:e2e
 ```
+
+To exercise the assignment/match concurrency regression against a fresh throwaway database on the local PostgreSQL server, run `RUN_DB_RACE_TEST=1 pnpm test:e2e`. The test needs permission to create and drop a separate database; it does not modify the normal development database.
 
 ## Deployment
 
