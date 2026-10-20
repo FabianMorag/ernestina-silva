@@ -1,12 +1,14 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import {
   ArrowRight,
   LogOut,
+  Pencil,
   Plus,
   ShieldCheck,
   Swords,
   Trophy,
   Users,
+  X,
 } from 'lucide-react'
 import useSWR, { useSWRConfig } from 'swr'
 import {
@@ -49,22 +51,22 @@ const adminLinks = [
 const pageIntro = {
   players: {
     title: 'Jugadores',
-    description: 'Registrá jugadores y editá sus nombres y títulos.',
+    description: 'Registra jugadores y edita sus nombres y títulos.',
   },
   teams: {
     title: 'Equipos',
     description:
-      'Creá el catálogo de equipos disponibles para los campeonatos.',
+      'Crea el catálogo de equipos disponibles para los campeonatos.',
   },
   championships: {
     title: 'Campeonatos',
     description:
-      'Creá un campeonato y elegí qué jugadores participan y con qué equipo.',
+      'Crea un campeonato y elige qué jugadores participan y con qué equipo.',
   },
   matches: {
     title: 'Partidos',
     description:
-      'Cargá resultados solo entre jugadores inscritos en el campeonato.',
+      'Carga resultados solo entre jugadores inscritos en el campeonato.',
   },
   'not-found': {
     title: 'Página no encontrada',
@@ -109,6 +111,32 @@ function AdminPage({ page }: { page: AdminSection }) {
   const [championshipId, setChampionshipId] = useState(
     () => new URLSearchParams(window.location.search).get('campeonato') ?? '',
   )
+  const [playerDialog, setPlayerDialog] = useState<{ player?: Player } | null>(
+    null,
+  )
+  const playerDialogRef = useRef<HTMLDialogElement>(null)
+  const playerDialogTrigger = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    const dialog = playerDialogRef.current
+    if (!dialog) return
+    if (playerDialog) {
+      if (!dialog.open) dialog.showModal()
+      return
+    }
+    if (dialog.open) dialog.close()
+    playerDialogTrigger.current?.focus()
+  }, [playerDialog])
+
+  function changePlayerDialog(next: { player?: Player } | null) {
+    if (next)
+      playerDialogTrigger.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null
+    setError('')
+    setPlayerDialog(next)
+  }
 
   async function submit(
     action: () => Promise<unknown>,
@@ -123,7 +151,7 @@ function AdminPage({ page }: { page: AdminSection }) {
       setError(
         cause instanceof Error
           ? cause.message
-          : 'Ocurrió un error. Intentá nuevamente.',
+          : 'Ocurrió un error. Intenta nuevamente.',
       )
     } finally {
       setBusy(false)
@@ -141,7 +169,7 @@ function AdminPage({ page }: { page: AdminSection }) {
     return (
       <main className="bg-base-200 grid min-h-screen place-items-center px-4">
         <form
-          className="card border-base-300 bg-base-100 w-full max-w-md border shadow-xl"
+          className="bg-base-100 border-base-300 card w-full max-w-md border shadow-xl"
           onSubmit={(event) => {
             event.preventDefault()
             const data = new FormData(event.currentTarget)
@@ -166,7 +194,7 @@ function AdminPage({ page }: { page: AdminSection }) {
                 Administración del campeonato
               </h1>
               <p className="text-base-content/60 mt-2">
-                Ingresá para administrar jugadores, equipos, campeonatos y
+                Ingresa para administrar jugadores, equipos, campeonatos y
                 partidos.
               </p>
               <a
@@ -246,7 +274,7 @@ function AdminPage({ page }: { page: AdminSection }) {
 
   return (
     <main className="bg-base-200 text-base-content min-h-screen">
-      <header className="border-base-300 bg-base-100 border-b">
+      <header className="bg-base-100 border-base-300 border-b">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-5">
           <div className="flex items-center gap-3">
             <div className="bg-primary text-primary-content grid size-10 place-items-center rounded-xl">
@@ -297,15 +325,12 @@ function AdminPage({ page }: { page: AdminSection }) {
       </header>
       <div className="mx-auto max-w-6xl space-y-7 px-5 py-9">
         <div>
-          <p className="text-primary text-sm font-medium">
-            Archivo de partidos
-          </p>
-          <h2 className="mt-1 text-3xl font-bold">{pageIntro[page].title}</h2>
+          <h2 className="text-3xl font-bold">{pageIntro[page].title}</h2>
           <p className="text-base-content/60 mt-2">
             {pageIntro[page].description}
           </p>
         </div>
-        {error && (
+        {error && !playerDialog && (
           <div className="alert alert-error" role="alert">
             {error}
             <button
@@ -318,115 +343,143 @@ function AdminPage({ page }: { page: AdminSection }) {
         )}
 
         {page === 'players' && (
-          <>
-            <section className="card border-base-300 bg-base-100 border">
-              <div className="card-body">
-                <div className="flex items-center gap-2">
-                  <Users className="text-primary size-5" />
-                  <h3 className="card-title text-lg">Nuevo jugador</h3>
-                  <span className="badge badge-ghost ml-auto">
-                    {players.length}
-                  </span>
-                </div>
-                <form
-                  className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    const form = event.currentTarget
-                    const data = new FormData(form)
-                    void submit(async () => {
-                      await request('/admin/players', {
+          <section className="space-y-2">
+            <div className="flex flex-wrap items-center justify-end gap-3 px-4">
+              <button
+                className="btn-outline btn btn-sm"
+                onClick={() => changePlayerDialog({})}
+              >
+                Agregar jugador <Plus className="size-4" />
+              </button>
+            </div>
+            {players.length > 0 ? (
+              <ul className="list" aria-label="Lista de jugadores">
+                {players.map((player) => (
+                  <li key={player.id} className="list-row items-center">
+                    <div className="list-col-grow min-w-0">
+                      <p className="truncate text-lg font-bold">
+                        {player.name}
+                      </p>
+                      {player.title && (
+                        <p className="text-base-content/60 truncate text-sm">
+                          {player.title}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      className="btn btn-ghost btn-sm btn-square"
+                      aria-label={`Editar ${player.name}`}
+                      onClick={() => changePlayerDialog({ player })}
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-base-content/60 px-4 py-6 text-sm">
+                Todavía no hay jugadores.
+              </p>
+            )}
+            <dialog
+              ref={playerDialogRef}
+              className="modal"
+              aria-labelledby="player-dialog-title"
+              onClose={() => changePlayerDialog(null)}
+              onClick={(event) => {
+                if (event.target === event.currentTarget)
+                  changePlayerDialog(null)
+              }}
+            >
+              {playerDialog && (
+                <div className="modal-box">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 id="player-dialog-title" className="text-lg font-bold">
+                      {playerDialog.player
+                        ? `Editar a ${playerDialog.player.name}`
+                        : 'Agregar jugador'}
+                    </h3>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-square"
+                      aria-label="Cerrar"
+                      onClick={() => changePlayerDialog(null)}
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                  <form
+                    key={playerDialog.player?.id ?? 'new'}
+                    className="mt-4 grid gap-3"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      const form = event.currentTarget
+                      const data = new FormData(form)
+                      const payload = {
                         name: data.get('name'),
                         title: data.get('title'),
-                      })
-                      await refreshPlayers()
-                    }, form)
-                  }}
-                >
-                  <input
-                    className="input input-bordered w-full"
-                    name="name"
-                    placeholder="Nombre"
-                    maxLength={100}
-                    required
-                  />
-                  <input
-                    className="input input-bordered w-full"
-                    name="title"
-                    placeholder="Título (opcional)"
-                    maxLength={100}
-                  />
-                  <button className="btn btn-primary" disabled={busy}>
-                    <Plus className="size-4" /> Agregar
-                  </button>
-                </form>
-              </div>
-            </section>
-            <section className="card border-base-300 bg-base-100 border">
-              <div className="card-body gap-4">
-                <h3 className="card-title text-lg">Jugadores registrados</h3>
-                <p className="text-base-content/60 text-sm">
-                  Podés cambiar sus nombres y títulos sin alterar sus partidos.
-                </p>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {players.map((player) => (
-                    <form
-                      key={player.id}
-                      className="border-base-300 grid gap-2 rounded-xl border p-3"
-                      onSubmit={(event) => {
-                        event.preventDefault()
-                        const data = new FormData(event.currentTarget)
-                        void submit(async () => {
-                          await patchRequest(`/admin/players/${player.id}`, {
-                            name: data.get('name'),
-                            title: data.get('title'),
-                          })
-                          await refreshPlayers()
-                        })
-                      }}
-                    >
-                      <label className="form-control">
-                        <span className="label-text mb-1">Nombre</span>
-                        <input
-                          className="input input-bordered w-full"
-                          name="name"
-                          defaultValue={player.name}
-                          maxLength={100}
-                          required
-                        />
-                      </label>
-                      <label className="form-control">
-                        <span className="label-text mb-1">
-                          Título (opcional)
-                        </span>
-                        <input
-                          className="input input-bordered w-full"
-                          name="title"
-                          defaultValue={player.title ?? ''}
-                          maxLength={100}
-                        />
-                      </label>
+                      }
+                      const player = playerDialog.player
+                      void submit(async () => {
+                        if (player)
+                          await patchRequest(
+                            `/admin/players/${player.id}`,
+                            payload,
+                          )
+                        else await request('/admin/players', payload)
+                        await refreshPlayers()
+                        setPlayerDialog(null)
+                      }, form)
+                    }}
+                  >
+                    <label className="form-control">
+                      <span className="label-text mb-1">Nombre</span>
+                      <input
+                        className="input input-bordered w-full"
+                        name="name"
+                        defaultValue={playerDialog.player?.name ?? ''}
+                        maxLength={100}
+                        required
+                        autoFocus
+                      />
+                    </label>
+                    <label className="form-control">
+                      <span className="label-text mb-1">Título (opcional)</span>
+                      <input
+                        className="input input-bordered w-full"
+                        name="title"
+                        defaultValue={playerDialog.player?.title ?? ''}
+                        maxLength={100}
+                      />
+                    </label>
+                    {error && (
+                      <p className="text-error text-sm" role="alert">
+                        {error}
+                      </p>
+                    )}
+                    <div className="modal-action">
                       <button
-                        className="btn btn-outline btn-sm justify-self-start"
-                        disabled={busy}
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => changePlayerDialog(null)}
                       >
-                        Guardar cambios
+                        Cancelar
                       </button>
-                    </form>
-                  ))}
+                      <button className="btn btn-primary" disabled={busy}>
+                        {playerDialog.player
+                          ? 'Guardar cambios'
+                          : 'Agregar jugador'}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-                {players.length === 0 && (
-                  <p className="text-base-content/60 text-sm">
-                    Todavía no hay jugadores.
-                  </p>
-                )}
-              </div>
-            </section>
-          </>
+              )}
+            </dialog>
+          </section>
         )}
 
         {page === 'teams' && (
-          <section className="card border-base-300 bg-base-100 border">
+          <section className="bg-base-100 border-base-300 card border">
             <div className="card-body gap-4">
               <div className="flex items-center gap-2">
                 <Swords className="text-primary size-5" />
@@ -454,7 +507,7 @@ function AdminPage({ page }: { page: AdminSection }) {
               </form>
               <div className="flex flex-wrap gap-2">
                 {teams.map((team) => (
-                  <span className="badge badge-outline badge-lg" key={team.id}>
+                  <span className="badge-outline badge badge-lg" key={team.id}>
                     {team.name}
                   </span>
                 ))}
@@ -471,7 +524,7 @@ function AdminPage({ page }: { page: AdminSection }) {
 
         {page === 'championships' && (
           <>
-            <section className="card border-base-300 bg-base-100 border">
+            <section className="bg-base-100 border-base-300 card border">
               <div className="card-body gap-4">
                 <div className="flex items-center gap-2">
                   <Trophy className="text-primary size-5" />
@@ -503,21 +556,21 @@ function AdminPage({ page }: { page: AdminSection }) {
                 </form>
               </div>
             </section>
-            <section className="card border-base-300 bg-base-100 border">
+            <section className="bg-base-100 border-base-300 card border">
               <div className="card-body gap-4">
                 <h3 className="card-title text-lg">Plantel del campeonato</h3>
                 <p className="text-base-content/60 text-sm">
-                  Solo los jugadores que agregues acá, con su equipo asignado,
+                  Solo los jugadores que agregues aquí, con su equipo asignado,
                   podrán disputar sus partidos.
                 </p>
                 <label className="form-control max-w-lg">
                   <span className="label-text mb-2">Campeonato</span>
                   <select
-                    className="select select-bordered w-full"
+                    className="select-bordered select w-full"
                     value={championshipId}
                     onChange={(event) => setChampionshipId(event.target.value)}
                   >
-                    <option value="">Seleccioná un campeonato</option>
+                    <option value="">Selecciona un campeonato</option>
                     {championships.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.name}
@@ -566,7 +619,7 @@ function AdminPage({ page }: { page: AdminSection }) {
                       }}
                     >
                       <select
-                        className="select select-bordered w-full"
+                        className="select-bordered select w-full"
                         name="playerId"
                         key={`player-${championshipId}-${selectedRoster.length}`}
                         required
@@ -582,7 +635,7 @@ function AdminPage({ page }: { page: AdminSection }) {
                         ))}
                       </select>
                       <select
-                        className="select select-bordered w-full"
+                        className="select-bordered select w-full"
                         name="teamId"
                         key={`team-${championshipId}-${selectedRoster.length}`}
                         required
@@ -608,7 +661,7 @@ function AdminPage({ page }: { page: AdminSection }) {
                     </form>
                     {(!players.length || !teams.length) && (
                       <p className="text-warning text-sm">
-                        Primero agregá jugadores y equipos en sus respectivas
+                        Primero agrega jugadores y equipos en sus respectivas
                         secciones.
                       </p>
                     )}
@@ -637,7 +690,7 @@ function AdminPage({ page }: { page: AdminSection }) {
                             }}
                           >
                             <select
-                              className="select select-bordered min-w-40 flex-1"
+                              className="select-bordered select min-w-40 flex-1"
                               name="teamId"
                               key={`${entry.id}-${entry.teamId}`}
                               defaultValue={entry.teamId}
@@ -650,7 +703,7 @@ function AdminPage({ page }: { page: AdminSection }) {
                               ))}
                             </select>
                             <button
-                              className="btn btn-outline btn-sm"
+                              className="btn-outline btn btn-sm"
                               disabled={busy}
                             >
                               Cambiar equipo
@@ -670,13 +723,13 @@ function AdminPage({ page }: { page: AdminSection }) {
               </div>
             </section>
             {selectedChampionship && (
-              <section className="card border-base-300 bg-base-100 border">
+              <section className="bg-base-100 border-base-300 card border">
                 <div className="card-body gap-4">
                   <h3 className="card-title text-lg">
                     Etapas de {selectedChampionship.name}
                   </h3>
                   <p className="text-base-content/60 text-sm">
-                    Opcional: agregá fases de grupos, liga o eliminación
+                    Opcional: agrega fases de grupos, liga o eliminación
                     directa.
                   </p>
                   <form
@@ -703,7 +756,7 @@ function AdminPage({ page }: { page: AdminSection }) {
                       required
                     />
                     <select
-                      className="select select-bordered w-full"
+                      className="select-bordered select w-full"
                       name="kind"
                       required
                     >
@@ -711,13 +764,13 @@ function AdminPage({ page }: { page: AdminSection }) {
                       <option value="LEAGUE">Liga</option>
                       <option value="KNOCKOUT">Eliminación directa</option>
                     </select>
-                    <button className="btn btn-outline" disabled={busy}>
+                    <button className="btn-outline btn" disabled={busy}>
                       <Plus className="size-4" /> Agregar etapa
                     </button>
                   </form>
                   <div className="flex flex-wrap gap-2">
                     {selectedStages.map((stage) => (
-                      <span className="badge badge-outline" key={stage.id}>
+                      <span className="badge-outline badge" key={stage.id}>
                         {stage.name} · {stageLabel(stage.kind)}
                       </span>
                     ))}
@@ -730,7 +783,7 @@ function AdminPage({ page }: { page: AdminSection }) {
 
         {page === 'matches' && (
           <>
-            <section className="card border-base-300 bg-base-100 border">
+            <section className="bg-base-100 border-base-300 card border">
               <div className="card-body gap-5">
                 <div className="flex items-center gap-2">
                   <Swords className="text-primary size-5" />
@@ -738,7 +791,7 @@ function AdminPage({ page }: { page: AdminSection }) {
                 </div>
                 {!canRecord && (
                   <p className="text-warning text-sm">
-                    Seleccioná un campeonato con al menos dos jugadores
+                    Selecciona un campeonato con al menos dos jugadores
                     inscritos y sus equipos asignados.
                   </p>
                 )}
@@ -756,7 +809,7 @@ function AdminPage({ page }: { page: AdminSection }) {
                     )
                     if (!home || !away) {
                       setError(
-                        'Seleccioná dos jugadores inscritos en el campeonato.',
+                        'Selecciona dos jugadores inscritos en el campeonato.',
                       )
                       return
                     }
@@ -778,7 +831,7 @@ function AdminPage({ page }: { page: AdminSection }) {
                   <label className="form-control">
                     <span className="label-text mb-2">Campeonato</span>
                     <select
-                      className="select select-bordered w-full"
+                      className="select-bordered select w-full"
                       name="championshipId"
                       required
                       value={championshipId}
@@ -787,7 +840,7 @@ function AdminPage({ page }: { page: AdminSection }) {
                       }
                     >
                       <option value="" disabled>
-                        Seleccioná un campeonato
+                        Selecciona un campeonato
                       </option>
                       {championships.map((item) => (
                         <option key={item.id} value={item.id}>
@@ -799,7 +852,7 @@ function AdminPage({ page }: { page: AdminSection }) {
                   <label className="form-control">
                     <span className="label-text mb-2">Etapa (opcional)</span>
                     <select
-                      className="select select-bordered w-full"
+                      className="select-bordered select w-full"
                       name="stageId"
                       key={championshipId}
                     >
@@ -827,14 +880,14 @@ function AdminPage({ page }: { page: AdminSection }) {
                           Jugador · equipo asignado
                         </span>
                         <select
-                          className="select select-bordered w-full"
+                          className="select-bordered select w-full"
                           name={`${prefix}PlayerId`}
                           key={`${prefix}-${championshipId}`}
                           required
                           defaultValue=""
                         >
                           <option value="" disabled>
-                            Seleccioná un jugador
+                            Selecciona un jugador
                           </option>
                           {selectedRoster.map((entry) => (
                             <option key={entry.id} value={entry.playerId}>
@@ -870,19 +923,19 @@ function AdminPage({ page }: { page: AdminSection }) {
             <section>
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-xl font-bold">Partidos registrados</h3>
-                <span className="badge badge-outline">
+                <span className="badge-outline badge">
                   {visibleMatches.length}
                 </span>
               </div>
               <div className="space-y-3">
                 {visibleMatches.length === 0 ? (
-                  <div className="border-base-300 bg-base-100 text-base-content/60 rounded-xl border border-dashed p-8 text-center">
+                  <div className="bg-base-100 border-base-300 text-base-content/60 rounded-xl border border-dashed p-8 text-center">
                     Todavía no hay partidos registrados.
                   </div>
                 ) : (
                   visibleMatches.map((match) => (
                     <article
-                      className="border-base-300 bg-base-100 flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5"
+                      className="bg-base-100 border-base-300 flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5"
                       key={match.id}
                     >
                       <div>
