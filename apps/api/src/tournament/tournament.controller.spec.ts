@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { TournamentController } from './tournament.controller.js';
 
 const input = {
@@ -18,9 +18,9 @@ describe('TournamentController', () => {
     championship: { findUnique: vi.fn() },
     stage: { findUnique: vi.fn() },
     player: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-    team: { findUnique: vi.fn() },
+    team: { findUnique: vi.fn(), update: vi.fn() },
     championshipParticipant: { findUnique: vi.fn(), findMany: vi.fn(), upsert: vi.fn() },
-    match: { create: vi.fn(), findFirst: vi.fn() },
+    match: { create: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
   };
 
   beforeEach(() => {
@@ -31,6 +31,8 @@ describe('TournamentController', () => {
     prisma.player.findUnique.mockImplementation(async ({ where }) => ({ id: where.id }));
     prisma.team.findUnique.mockImplementation(async ({ where }) => ({ id: where.id }));
     prisma.match.create.mockResolvedValue({ id: 'match' });
+    prisma.match.findUnique.mockResolvedValue({ id: 'match', championshipId: 'championship' });
+    prisma.match.updateMany.mockResolvedValue({ count: 1 });
     prisma.championshipParticipant.findUnique.mockImplementation(async ({ where }) => ({
       championshipId: where.championshipId_playerId.championshipId,
       playerId: where.championshipId_playerId.playerId,
@@ -43,6 +45,90 @@ describe('TournamentController', () => {
     await expect(controller.createMatch(input)).resolves.toEqual({ id: 'match' });
     expect(prisma.match.create).toHaveBeenCalledWith({ data: input });
   });
+
+  it('deletes only the selected match', async () => {
+    prisma.match.deleteMany.mockResolvedValue({ count: 1 })
+    await expect(
+      new TournamentController(prisma as never).deleteMatch('match'),
+    ).resolves.toEqual({ deleted: true })
+    expect(prisma.match.deleteMany).toHaveBeenCalledWith({
+      where: { id: 'match' },
+    })
+  })
+
+  it('updates only the stage and goals of the selected match', async () => {
+    await expect(new TournamentController(prisma as never).updateMatch('match', {
+      stageId: 'stage', homeScore: 4, awayScore: 1,
+    })).resolves.toEqual({ updated: true });
+    expect(prisma.match.updateMany).toHaveBeenCalledWith({
+      where: { id: 'match' },
+      data: { stageId: 'stage', homeScore: 4, awayScore: 1 },
+    });
+  });
+
+  it('clears the stage without changing the player or team identities', async () => {
+    await new TournamentController(prisma as never).updateMatch('match', {
+      stageId: null, homeScore: 3, awayScore: 2,
+    });
+    expect(prisma.match.updateMany).toHaveBeenCalledWith({
+      where: { id: 'match' },
+      data: { stageId: null, homeScore: 3, awayScore: 2 },
+    });
+    expect(prisma.stage.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid edited goals without writing', async () => {
+    await expect(new TournamentController(prisma as never).updateMatch('match', {
+      stageId: 'stage', homeScore: -1, awayScore: 2,
+    })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(new TournamentController(prisma as never).updateMatch('match', {
+      stageId: 'stage', homeScore: 1.5, awayScore: 2,
+    })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(new TournamentController(prisma as never).updateMatch('match', {
+      stageId: 'stage', homeScore: 1, awayScore: -1,
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.match.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects a stage from another championship without writing', async () => {
+    prisma.stage.findUnique.mockResolvedValue({ id: 'other-stage', championshipId: 'other' });
+    await expect(new TournamentController(prisma as never).updateMatch('match', {
+      stageId: 'other-stage', homeScore: 3, awayScore: 2,
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.match.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects changes to match identities when correcting a result', async () => {
+    await expect(new TournamentController(prisma as never).updateMatch('match', {
+      stageId: null, homeScore: 3, awayScore: 2, homePlayerId: 'someone-else',
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.match.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('reports a missing match without writing', async () => {
+    prisma.match.findUnique.mockResolvedValue(null);
+    await expect(new TournamentController(prisma as never).updateMatch('missing', {
+      stageId: null, homeScore: 3, awayScore: 2,
+    })).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.match.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('reports a match removed during editing', async () => {
+    prisma.match.updateMany.mockResolvedValue({ count: 0 });
+    await expect(new TournamentController(prisma as never).updateMatch('match', {
+      stageId: null, homeScore: 3, awayScore: 2,
+    })).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('reports a missing match without deleting another record', async () => {
+    prisma.match.deleteMany.mockResolvedValue({ count: 0 })
+    await expect(
+      new TournamentController(prisma as never).deleteMatch('missing'),
+    ).rejects.toBeInstanceOf(NotFoundException)
+    expect(prisma.match.deleteMany).toHaveBeenCalledWith({
+      where: { id: 'missing' },
+    })
+  })
 
   it('rejects a stage from another championship without writing', async () => {
     prisma.stage.findUnique.mockResolvedValue({ id: 'stage', championshipId: 'other' });
@@ -78,6 +164,47 @@ describe('TournamentController', () => {
     prisma.player.update.mockRejectedValue({ code: 'P2002' });
     await expect(new TournamentController(prisma as never).updatePlayer('home', { name: 'away', title: null })).rejects.toBeInstanceOf(ConflictException);
   });
+
+  it('renames an existing team without changing its identity', async () => {
+    prisma.team.update.mockResolvedValue({ id: 'team-a', name: 'Arsenal' })
+    await expect(
+      new TournamentController(prisma as never).updateTeam('team-a', {
+        name: ' Arsenal ',
+      }),
+    ).resolves.toEqual({ id: 'team-a', name: 'Arsenal' })
+    expect(prisma.team.update).toHaveBeenCalledWith({
+      where: { id: 'team-a' },
+      data: { name: 'Arsenal' },
+    })
+  })
+
+  it('rejects an invalid team name without writing', async () => {
+    await expect(
+      new TournamentController(prisma as never).updateTeam('team-a', {
+        name: ' ',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException)
+    expect(prisma.team.update).not.toHaveBeenCalled()
+  })
+
+  it('rejects renaming a missing team without writing', async () => {
+    prisma.team.findUnique.mockResolvedValue(null)
+    await expect(
+      new TournamentController(prisma as never).updateTeam('missing', {
+        name: 'Arsenal',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException)
+    expect(prisma.team.update).not.toHaveBeenCalled()
+  })
+
+  it('rejects a duplicate edited team name without overwriting another team', async () => {
+    prisma.team.update.mockRejectedValue({ code: 'P2002' })
+    await expect(
+      new TournamentController(prisma as never).updateTeam('team-a', {
+        name: 'team-b',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException)
+  })
 
   it('rejects a changed team after the player has a match in that championship', async () => {
     prisma.championshipParticipant.findUnique.mockResolvedValue({ teamId: 'team-a' });

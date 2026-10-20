@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, NotFoundException, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 import { StageKind } from '../generated/prisma/enums.js';
 import { AuthGuard } from '../auth/auth.guard.js';
@@ -60,6 +60,20 @@ export class TournamentController {
   @Post('teams')
   createTeam(@Body() body: unknown) {
     return this.prisma.team.create({ data: { name: nameFrom(body) } });
+  }
+
+  @Patch('teams/:id')
+  async updateTeam(@Param('id') id: string, @Body() body: unknown) {
+    const name = nameFrom(body)
+    const team = await this.prisma.team.findUnique({ where: { id } })
+    if (!team) throw new NotFoundException('Team not found')
+    try {
+      return await this.prisma.team.update({ where: { id }, data: { name } })
+    } catch (error) {
+      if ((error as { code?: unknown })?.code === 'P2002')
+        throw new ConflictException('Team name is already in use')
+      throw error
+    }
   }
 
   @Get('championships')
@@ -134,6 +148,51 @@ export class TournamentController {
       include: { championship: true, stage: true, homePlayer: true, awayPlayer: true, homeTeam: true, awayTeam: true },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  @Delete('matches/:id')
+  async deleteMatch(@Param('id') id: string) {
+    const { count } = await this.prisma.match.deleteMany({ where: { id } })
+    if (count === 0) throw new NotFoundException('Match not found')
+    return { deleted: true }
+  }
+
+  @Patch('matches/:id')
+  async updateMatch(@Param('id') id: string, @Body() body: unknown) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      throw new BadRequestException('Stage and scores are required');
+    }
+    const input = body as Record<string, unknown>;
+    const allowed = ['stageId', 'homeScore', 'awayScore'];
+    if (Object.keys(input).length !== allowed.length || Object.keys(input).some((key) => !allowed.includes(key))) {
+      throw new BadRequestException('Only stage and scores can be edited');
+    }
+    if (input.stageId !== null && (typeof input.stageId !== 'string' || !input.stageId)) {
+      throw new BadRequestException('stageId must be an identifier or null');
+    }
+    for (const key of ['homeScore', 'awayScore'] as const) {
+      if (!Number.isInteger(input[key]) || (input[key] as number) < 0) {
+        throw new BadRequestException(`${key} must be a non-negative integer`);
+      }
+    }
+    const match = await this.prisma.match.findUnique({ where: { id }, select: { championshipId: true } });
+    if (!match) throw new NotFoundException('Match not found');
+    if (input.stageId !== null) {
+      const stage = await this.prisma.stage.findUnique({ where: { id: input.stageId as string } });
+      if (!stage || stage.championshipId !== match.championshipId) {
+        throw new BadRequestException('Stage must belong to the championship');
+      }
+    }
+    const { count } = await this.prisma.match.updateMany({
+      where: { id },
+      data: {
+        stageId: input.stageId as string | null,
+        homeScore: input.homeScore as number,
+        awayScore: input.awayScore as number,
+      },
+    });
+    if (count === 0) throw new NotFoundException('Match not found');
+    return { updated: true };
   }
 
   @Post('matches')

@@ -49,6 +49,16 @@ export async function patchRequest<T>(path: string, body: object): Promise<T> {
   return response.json() as Promise<T>
 }
 
+export async function deleteRequest<T>(path: string): Promise<T> {
+  const response = await fetch(`/api${path}`, {
+    method: 'DELETE',
+    credentials: 'same-origin',
+  })
+  if (!response.ok)
+    throw new Error('No pudimos completar la solicitud. Intenta nuevamente.')
+  return response.json() as Promise<T>
+}
+
 export function stageLabel(kind: Stage['kind']): string {
   return { GROUP: 'Grupos', LEAGUE: 'Liga', KNOCKOUT: 'Eliminación directa' }[
     kind
