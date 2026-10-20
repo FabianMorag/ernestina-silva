@@ -27,13 +27,13 @@ Apply the checked-in migrations before starting the API:
 pnpm --filter @ernestina-silva/api exec prisma migrate deploy
 ```
 
-Load the 12 initial players with their optional titles:
+Load the 12 initial players with their optional titles and the 19 team catalog:
 
 ```sh
 pnpm --filter @ernestina-silva/api exec prisma db seed
 ```
 
-The player seed is safe to rerun: fixed player IDs prevent duplicates and existing names or titles are never overwritten. Teams are not seeded because their names have not been provided yet.
+The seed is safe to rerun: fixed player and team IDs prevent duplicates, and existing names or titles are never overwritten.
 
 With `ENABLE_LOCAL_ADMIN=true` in the API `.env`, an empty local database gets a temporary `admin` / `admin` account. This account cannot sign in when `NODE_ENV=production`, even if the database is reused. Public pages at `/`, `/partidos`, and `/campeonatos` require no account. Sign in at `/admin` to manage the tournament. The admin has separate pages for players (`/admin/jugadores`), teams (`/admin/equipos`), championships (`/admin/campeonatos`), and match results (`/admin/partidos`). Create a championship, then select it to enroll only its participating players and assign each a team; optional stages are managed there too. The match form offers only players enrolled in the selected championship and uses their assigned teams. A player can have another team in a later championship. Do not use the temporary account for deployed environments.
 
