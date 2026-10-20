@@ -32,7 +32,7 @@ export async function request<T>(path: string, body?: object): Promise<T> {
     body: body ? JSON.stringify(body) : undefined,
   })
   if (!response.ok) {
-    throw new Error('No pudimos completar la solicitud. Intentá nuevamente.')
+    throw new Error('No pudimos completar la solicitud. Intenta nuevamente.')
   }
   return response.json() as Promise<T>
 }
@@ -45,7 +45,7 @@ export async function patchRequest<T>(path: string, body: object): Promise<T> {
     body: JSON.stringify(body),
   })
   if (!response.ok)
-    throw new Error('No pudimos completar la solicitud. Intentá nuevamente.')
+    throw new Error('No pudimos completar la solicitud. Intenta nuevamente.')
   return response.json() as Promise<T>
 }
 

@@ -200,7 +200,7 @@ export function PublicPage({ page }: { page: PublicRoute }) {
               </h1>
               <p>
                 {listingChampionships
-                  ? 'Explorá los campeonatos y reviví cada resultado de Ernestina Silva.'
+                  ? 'Explora los campeonatos y revive cada resultado de Ernestina Silva.'
                   : 'Todos los resultados registrados, partido a partido.'}
               </p>
             </div>
@@ -237,7 +237,7 @@ export function PublicPage({ page }: { page: PublicRoute }) {
             </div>
             {error && (
               <div className="public-message" role="alert">
-                No pudimos cargar los datos. Actualizá la página para intentarlo
+                No pudimos cargar los datos. Actualiza la página para intentarlo
                 de nuevo.
               </div>
             )}
