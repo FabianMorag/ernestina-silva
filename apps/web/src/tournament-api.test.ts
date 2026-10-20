@@ -13,7 +13,10 @@ test('PATCH player edits use the admin session and do not change GET/POST behavi
     await request('/tournament/players')
     await request('/admin/players', { name: 'nico' })
     await patchRequest('/admin/players/player', { name: 'Nico', title: null })
-    assert.deepEqual(calls.map(({ options }) => options.method), ['GET', 'POST', 'PATCH'])
+    assert.deepEqual(
+      calls.map(({ options }) => options.method),
+      ['GET', 'POST', 'PATCH'],
+    )
     assert.equal(calls[2].options.credentials, 'same-origin')
     assert.equal(calls[2].url, '/api/admin/players/player')
   } finally {

@@ -1,7 +1,17 @@
 export type Item = { id: string; name: string }
 export type Player = Item & { title: string | null }
-export type Participant = { id: string; championshipId: string; playerId: string; teamId: string; player: Player; team: Item }
-export type Stage = Item & { kind: 'GROUP' | 'LEAGUE' | 'KNOCKOUT'; championshipId: string }
+export type Participant = {
+  id: string
+  championshipId: string
+  playerId: string
+  teamId: string
+  player: Player
+  team: Item
+}
+export type Stage = Item & {
+  kind: 'GROUP' | 'LEAGUE' | 'KNOCKOUT'
+  championshipId: string
+}
 export type Match = {
   id: string
   homeScore: number
@@ -34,10 +44,13 @@ export async function patchRequest<T>(path: string, body: object): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!response.ok) throw new Error('No pudimos completar la solicitud. Intentá nuevamente.')
+  if (!response.ok)
+    throw new Error('No pudimos completar la solicitud. Intentá nuevamente.')
   return response.json() as Promise<T>
 }
 
 export function stageLabel(kind: Stage['kind']): string {
-  return { GROUP: 'Grupos', LEAGUE: 'Liga', KNOCKOUT: 'Eliminación directa' }[kind]
+  return { GROUP: 'Grupos', LEAGUE: 'Liga', KNOCKOUT: 'Eliminación directa' }[
+    kind
+  ]
 }

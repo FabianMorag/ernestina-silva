@@ -1,9 +1,9 @@
-@import "tailwindcss";
-@plugin "daisyui" {
+@import 'tailwindcss';
+@plugin 'daisyui' {
   themes: dark --default;
 }
 
-:root[data-theme="dark"] {
+:root[data-theme='dark'] {
   --color-base-100: #111b20;
   --color-base-200: #0b1318;
   --color-base-300: #2a393b;
