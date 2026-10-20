@@ -1,122 +1,101 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState, type FormEvent } from 'react'
+import { ArrowRight, LogOut, Plus, ShieldCheck, Swords, Trophy, Users } from 'lucide-react'
+import useSWR, { useSWRConfig } from 'swr'
+import { signOut } from './session.ts'
+import { PublicPage } from './PublicPage.tsx'
+import { pageForPath } from './routes.ts'
+import { request, stageLabel, type Item, type Match, type Stage } from './tournament-api.ts'
 
-function App() {
-  const [count, setCount] = useState(0)
+function AdminPage() {
+  const { mutate: mutateCache } = useSWRConfig()
+  const { data: user, mutate: refreshUser, isLoading: checkingUser } = useSWR<{ username: string }>('/auth/me', request, { shouldRetryOnError: false })
+  const signedIn = Boolean(user)
+  const { data: players = [], mutate: refreshPlayers } = useSWR<Item[]>(signedIn ? '/admin/players' : null, request)
+  const { data: teams = [], mutate: refreshTeams } = useSWR<Item[]>(signedIn ? '/admin/teams' : null, request)
+  const { data: championships = [], mutate: refreshChampionships } = useSWR<Item[]>(signedIn ? '/admin/championships' : null, request)
+  const { data: stages = [], mutate: refreshStages } = useSWR<Stage[]>(signedIn ? '/admin/stages' : null, request)
+  const { data: matches = [], mutate: refreshMatches } = useSWR<Match[]>(signedIn ? '/admin/matches' : null, request)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [championshipId, setChampionshipId] = useState('')
+
+  async function submit(action: () => Promise<unknown>, form?: HTMLFormElement) {
+    setError('')
+    setBusy(true)
+    try {
+      await action()
+      form?.reset()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Ocurrió un error. Intentá nuevamente.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function createName(event: FormEvent<HTMLFormElement>, path: string, refresh: () => Promise<unknown>) {
+    event.preventDefault()
+    const form = event.currentTarget
+    const name = String(new FormData(form).get('name') ?? '')
+    void submit(async () => {
+      await request(path, { name })
+      await refresh()
+    }, form)
+  }
+
+  if (checkingUser) return <main className="grid min-h-screen place-items-center text-base-content/60">Cargando administración…</main>
+
+  if (!signedIn) return (
+    <main className="grid min-h-screen place-items-center bg-base-200 px-4">
+      <form className="card w-full max-w-md border border-base-300 bg-base-100 shadow-xl" onSubmit={(event) => {
+        event.preventDefault()
+        const form = event.currentTarget
+        const data = new FormData(form)
+        void submit(async () => {
+          await request('/auth/login', { username: data.get('username'), password: data.get('password') })
+          await refreshUser()
+        })
+      }}>
+        <div className="card-body gap-5">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-content"><ShieldCheck /></div>
+          <div><p className="text-sm font-semibold uppercase tracking-widest text-primary">Ernestina Silva</p><h1 className="mt-2 text-3xl font-bold">Administración del campeonato</h1><p className="mt-2 text-base-content/60">Ingresá para registrar los partidos históricos.</p><a className="link link-primary mt-2 inline-block text-sm" href="/">Volver al campeonato</a></div>
+          <label className="form-control"><span className="label-text mb-2">Usuario</span><input className="input input-bordered w-full" name="username" autoComplete="username" required /></label>
+          <label className="form-control"><span className="label-text mb-2">Contraseña</span><input className="input input-bordered w-full" name="password" type="password" autoComplete="current-password" required /></label>
+          {error && <p className="text-sm text-error" role="alert">{error}</p>}
+          <button className="btn btn-primary mt-2" disabled={busy}>Ingresar <ArrowRight className="size-4" /></button>
+          {import.meta.env.DEV && <p className="text-xs text-base-content/50">Solo para desarrollo local: admin / admin</p>}
+        </div>
+      </form>
+    </main>
+  )
+
+  const selectedStages = stages.filter((stage) => stage.championshipId === championshipId)
+  const canRecord = players.length >= 2 && teams.length >= 1 && championships.length >= 1
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <main className="min-h-screen bg-base-200 text-base-content">
+      <header className="border-b border-base-300 bg-base-100"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-5"><div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-content"><Trophy className="size-5" /></div><div><p className="text-xs font-bold uppercase tracking-widest text-primary">Ernestina Silva</p><h1 className="text-xl font-bold">Administración del campeonato</h1></div></div><div className="flex items-center gap-2"><a className="btn btn-ghost btn-sm" href="/">Ver campeonato</a><button className="btn btn-ghost btn-sm" onClick={() => void submit(() => signOut(() => request('/auth/logout', {}), () => mutateCache(() => true, undefined, { revalidate: false })))}><LogOut className="size-4" /> Cerrar sesión</button></div></div></header>
+      <div className="mx-auto max-w-6xl space-y-7 px-5 py-9">
+        <div><p className="text-sm font-medium text-primary">Archivo de partidos</p><h2 className="mt-1 text-3xl font-bold">Cargá los resultados</h2><p className="mt-2 text-base-content/60">Primero agregá jugadores, equipos y campeonatos; después registrá cada resultado.</p></div>
+        {error && <div className="alert alert-error" role="alert">{error}<button className="btn btn-ghost btn-sm" onClick={() => setError('')}>Cerrar</button></div>}
+        <div className="grid gap-4 md:grid-cols-3">
+          {([['Jugadores', '/admin/players', players, refreshPlayers, Users], ['Equipos', '/admin/teams', teams, refreshTeams, Swords], ['Campeonatos', '/admin/championships', championships, refreshChampionships, Trophy]] as const).map(([title, path, items, refresh, Icon]) => <section className="card border border-base-300 bg-base-100" key={path}><div className="card-body"><div className="flex items-center gap-2"><Icon className="size-5 text-primary" /><h3 className="card-title text-lg">{title}</h3><span className="badge badge-ghost ml-auto">{items.length}</span></div><form className="mt-3 flex gap-2" onSubmit={(event) => createName(event, path, refresh)}><input className="input input-bordered min-w-0 flex-1" name="name" placeholder={`Nuevo registro de ${title.toLowerCase()}`} maxLength={100} required /><button className="btn btn-primary btn-square" aria-label={`Agregar a ${title.toLowerCase()}`} disabled={busy}><Plus className="size-4" /></button></form><p className="min-h-6 text-sm text-base-content/60">{items.length ? items.map((item) => item.name).join(' · ') : 'Todavía no hay registros.'}</p></div></section>)}
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        <section className="card border border-base-300 bg-base-100"><div className="card-body"><div className="flex items-center gap-2"><Trophy className="size-5 text-primary" /><h3 className="card-title text-lg">Etapas del campeonato</h3></div><p className="text-sm text-base-content/60">Opcional: agregá etapas de grupos, liga o eliminación directa a un campeonato.</p><form className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]" onSubmit={(event) => { event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); void submit(async () => { await request('/admin/stages', { name: data.get('name'), kind: data.get('kind'), championshipId: data.get('championshipId') }); await refreshStages() }, form) }}><input className="input input-bordered w-full" name="name" placeholder="Nombre de la etapa" maxLength={100} required /><select className="select select-bordered w-full" name="kind" required><option value="GROUP">Grupos</option><option value="LEAGUE">Liga</option><option value="KNOCKOUT">Eliminación directa</option></select><select className="select select-bordered w-full" name="championshipId" required defaultValue=""><option value="" disabled>Campeonato</option>{championships.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button className="btn btn-outline" disabled={busy || !championships.length}><Plus className="size-4" /> Agregar etapa</button></form>{stages.length > 0 && <p className="text-sm text-base-content/60">{stages.map((stage) => `${stage.name} (${stageLabel(stage.kind)})`).join(' · ')}</p>}</div></section>
+        <section className="card border border-base-300 bg-base-100"><div className="card-body gap-5"><div className="flex items-center gap-2"><Swords className="size-5 text-primary" /><h3 className="card-title text-lg">Registrar un partido</h3></div>{!canRecord && <p className="text-sm text-warning">Agregá al menos dos jugadores, un equipo y un campeonato para empezar a registrar partidos.</p>}<form className="grid gap-4 md:grid-cols-2" onSubmit={(event) => { event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); void submit(async () => { await request('/admin/matches', { championshipId: data.get('championshipId'), stageId: data.get('stageId') || null, homePlayerId: data.get('homePlayerId'), awayPlayerId: data.get('awayPlayerId'), homeTeamId: data.get('homeTeamId'), awayTeamId: data.get('awayTeamId'), homeScore: Number(data.get('homeScore')), awayScore: Number(data.get('awayScore')) }); await refreshMatches() }, form) }}>
+          <label className="form-control"><span className="label-text mb-2">Campeonato</span><select className="select select-bordered w-full" name="championshipId" required value={championshipId} onChange={(event) => setChampionshipId(event.target.value)}><option value="" disabled>Seleccioná un campeonato</option>{championships.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label className="form-control"><span className="label-text mb-2">Etapa (opcional)</span><select className="select select-bordered w-full" name="stageId" key={championshipId}><option value="">Sin etapa</option>{selectedStages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name} · {stageLabel(stage.kind)}</option>)}</select></label>
+          {[['Local', 'home'], ['Visitante', 'away']].map(([label, prefix]) => <div className="rounded-xl border border-base-300 p-4" key={prefix}><h4 className="mb-3 font-semibold">{label}</h4><div className="grid gap-3 sm:grid-cols-2"><label className="form-control"><span className="label-text mb-2">Jugador</span><select className="select select-bordered w-full" name={`${prefix}PlayerId`} required defaultValue=""><option value="" disabled>Seleccioná un jugador</option>{players.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label className="form-control"><span className="label-text mb-2">Equipo</span><select className="select select-bordered w-full" name={`${prefix}TeamId`} required defaultValue=""><option value="" disabled>Seleccioná un equipo</option>{teams.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></div><label className="form-control mt-3"><span className="label-text mb-2">Goles</span><input className="input input-bordered w-28" type="number" name={`${prefix}Score`} min="0" step="1" required /></label></div>)}
+          <div className="md:col-span-2"><button className="btn btn-primary" disabled={busy || !canRecord}>Guardar partido <ArrowRight className="size-4" /></button></div>
+        </form></div></section>
+        <section><div className="mb-4 flex items-center justify-between"><h3 className="text-xl font-bold">Partidos registrados</h3><span className="badge badge-outline">{matches.length}</span></div><div className="space-y-3">{matches.length === 0 ? <div className="rounded-xl border border-dashed border-base-300 bg-base-100 p-8 text-center text-base-content/60">Todavía no hay partidos registrados.</div> : matches.map((match) => <article className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-base-300 bg-base-100 p-5" key={match.id}><div><p className="font-semibold">{match.homePlayer.name} <span className="text-base-content/40">contra</span> {match.awayPlayer.name}</p><p className="text-sm text-base-content/60">{match.homeTeam.name} · {match.awayTeam.name}</p><p className="mt-1 text-xs text-base-content/50">{match.championship.name}{match.stage ? ` / ${match.stage.name}` : ''}</p></div><div className="rounded-lg bg-base-200 px-4 py-2 text-xl font-black tabular-nums">{match.homeScore} — {match.awayScore}</div></article>)}</div></section>
+      </div>
+    </main>
   )
+}
+
+function App() {
+  const page = pageForPath(window.location.pathname)
+  return page === 'admin' ? <AdminPage /> : <PublicPage page={page} />
 }
 
 export default App
