@@ -30,8 +30,10 @@ model AdminSession {
 model Player {
   id        String   @id @default(cuid())
   name      String   @unique
+  title     String?
   homeGames Match[]  @relation("HomePlayer")
   awayGames Match[]  @relation("AwayPlayer")
+  participations ChampionshipParticipant[]
 }
 
 model Team {
@@ -39,6 +41,7 @@ model Team {
   name      String   @unique
   homeGames Match[]  @relation("HomeTeam")
   awayGames Match[]  @relation("AwayTeam")
+  participations ChampionshipParticipant[]
 }
 
 model Championship {
@@ -46,6 +49,20 @@ model Championship {
   name      String   @unique
   stages    Stage[]
   matches   Match[]
+  participants ChampionshipParticipant[]
+}
+
+model ChampionshipParticipant {
+  id             String       @id @default(cuid())
+  championshipId String
+  playerId       String
+  teamId         String
+  championship   Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  player         Player       @relation(fields: [playerId], references: [id])
+  team           Team         @relation(fields: [teamId], references: [id])
+
+  @@unique([championshipId, playerId])
+  @@index([teamId])
 }
 
 enum StageKind {
