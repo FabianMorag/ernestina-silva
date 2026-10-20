@@ -8,7 +8,8 @@ export type Participant = {
   player: Player
   team: Item
 }
-export type Stage = Item & {
+export type Stage = {
+  id: string
   kind: 'GROUP' | 'LEAGUE' | 'KNOCKOUT'
   championshipId: string
 }

@@ -18,7 +18,7 @@ export class PublicTournamentController {
 
   @Get('stages')
   stages() {
-    return this.prisma.stage.findMany({ include: { championship: true }, orderBy: { name: 'asc' } });
+    return this.prisma.stage.findMany({ include: { championship: true }, orderBy: { kind: 'asc' } });
   }
 
   @Get('matches')

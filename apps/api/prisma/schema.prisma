@@ -73,13 +73,12 @@ enum StageKind {
 
 model Stage {
   id             String       @id @default(cuid())
-  name           String
   kind           StageKind
   championshipId String
   championship   Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
   matches        Match[]
 
-  @@unique([championshipId, name])
+  @@unique([championshipId, kind])
 }
 
 model Match {

@@ -81,7 +81,17 @@ export class TournamentController {
 
   @Post('championships')
   createChampionship(@Body() body: unknown) {
-    return this.prisma.championship.create({ data: { name: nameFrom(body) } });
+    const name = nameFrom(body);
+    const stageKinds = (body as { stageKinds?: unknown } | null)?.stageKinds;
+    if (!Array.isArray(stageKinds) || stageKinds.length === 0 ||
+      stageKinds.some((kind) => !Object.values(StageKind).includes(kind as StageKind)) ||
+      new Set(stageKinds).size !== stageKinds.length) {
+      throw new BadRequestException('Select one or more distinct stage kinds');
+    }
+    return this.prisma.championship.create({ data: {
+      name,
+      stages: { create: stageKinds.map((kind) => ({ kind: kind as StageKind })) },
+    } });
   }
 
   @Get('participants')
@@ -128,18 +138,22 @@ export class TournamentController {
 
   @Get('stages')
   stages() {
-    return this.prisma.stage.findMany({ include: { championship: true }, orderBy: { name: 'asc' } });
+    return this.prisma.stage.findMany({ include: { championship: true }, orderBy: { kind: 'asc' } });
   }
 
   @Post('stages')
-  async createStage(@Body() body: { name?: unknown; kind?: unknown; championshipId?: unknown }) {
-    const name = nameFrom(body);
-    if (typeof body.championshipId !== 'string' || !Object.values(StageKind).includes(body.kind as StageKind)) {
+  async createStage(@Body() body: { kind?: unknown; championshipId?: unknown }) {
+    if (typeof body?.championshipId !== 'string' || !Object.values(StageKind).includes(body.kind as StageKind)) {
       throw new BadRequestException('A championship and valid stage kind are required');
     }
     const championship = await this.prisma.championship.findUnique({ where: { id: body.championshipId } });
     if (!championship) throw new NotFoundException('Championship not found');
-    return this.prisma.stage.create({ data: { name, kind: body.kind as StageKind, championshipId: body.championshipId } });
+    try {
+      return await this.prisma.stage.create({ data: { kind: body.kind as StageKind, championshipId: body.championshipId } });
+    } catch (error) {
+      if ((error as { code?: unknown })?.code === 'P2002') throw new ConflictException('Stage kind already exists in championship');
+      throw error;
+    }
   }
 
   @Get('matches')

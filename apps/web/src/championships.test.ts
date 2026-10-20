@@ -10,9 +10,7 @@ const championships: Item[] = [
   { id: 'cup', name: 'Copa Ernestina' },
   { id: 'league', name: 'Liga' },
 ]
-const stages: Stage[] = [
-  { id: 'groups', name: 'Grupos A', kind: 'GROUP', championshipId: 'cup' },
-]
+const stages: Stage[] = [{ id: 'groups', kind: 'GROUP', championshipId: 'cup' }]
 const matches = [
   { id: 'match-1', championship: championships[0] },
   { id: 'match-2', championship: championships[1] },

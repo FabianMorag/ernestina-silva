@@ -409,6 +409,9 @@ export function AdminPage({ page }: { page: AdminSection }) {
   const selectedStages = stages.filter(
     (stage) => stage.championshipId === championshipId,
   )
+  const availableStageKinds = (['GROUP', 'LEAGUE', 'KNOCKOUT'] as const).filter(
+    (kind) => !selectedStages.some((stage) => stage.kind === kind),
+  )
   const visibleMatches = championshipId
     ? matches.filter((match) => match.championship.id === championshipId)
     : matches
@@ -772,23 +775,69 @@ export function AdminPage({ page }: { page: AdminSection }) {
                   </span>
                 </div>
                 <form
-                  className="flex flex-wrap gap-2 px-4"
-                  onSubmit={(event) =>
-                    createName(
-                      event,
-                      '/admin/championships',
-                      refreshChampionships,
-                    )
-                  }
+                  className="space-y-4 px-4"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    const form = event.currentTarget
+                    const data = new FormData(form)
+                    const stageKinds = data.getAll('stageKinds')
+                    if (stageKinds.length === 0) {
+                      form
+                        .querySelector<HTMLInputElement>('[name="stageKinds"]')
+                        ?.setCustomValidity('Selecciona al menos una etapa')
+                      form.reportValidity()
+                      return
+                    }
+                    void submit(async () => {
+                      await request('/admin/championships', {
+                        name: data.get('name'),
+                        stageKinds,
+                      })
+                      await Promise.all([
+                        refreshChampionships(),
+                        refreshStages(),
+                      ])
+                    }, form)
+                  }}
                 >
                   <input
-                    className="input input-bordered input-sm min-w-0 flex-1"
+                    className="input input-bordered w-full"
                     name="name"
                     placeholder="Nombre del campeonato"
                     maxLength={100}
                     required
                   />
-                  <button className="btn-outline btn btn-sm" disabled={busy}>
+                  <fieldset className="space-y-2">
+                    <legend className="text-sm font-medium">
+                      Etapas (elige al menos una)
+                    </legend>
+                    <div className="flex flex-wrap gap-x-6 gap-y-2">
+                      {(['GROUP', 'LEAGUE', 'KNOCKOUT'] as const).map(
+                        (kind) => (
+                          <label
+                            className="flex cursor-pointer items-center gap-2"
+                            key={kind}
+                          >
+                            <input
+                              className="checkbox checkbox-sm"
+                              type="checkbox"
+                              name="stageKinds"
+                              value={kind}
+                              onChange={(event) => {
+                                event.currentTarget.form
+                                  ?.querySelector<HTMLInputElement>(
+                                    '[name="stageKinds"]',
+                                  )
+                                  ?.setCustomValidity('')
+                              }}
+                            />
+                            {stageLabel(kind)}
+                          </label>
+                        ),
+                      )}
+                    </div>
+                  </fieldset>
+                  <button className="btn-outline btn" disabled={busy}>
                     Crear campeonato <Plus className="size-4" />
                   </button>
                 </form>
@@ -945,43 +994,37 @@ export function AdminPage({ page }: { page: AdminSection }) {
                   <h3 className="px-4 text-xl font-bold">
                     Etapas de {selectedChampionship.name}
                   </h3>
-                  <p className="text-base-content/60 px-4 text-sm">
-                    Opcional: agrega fases de grupos, liga o eliminación
-                    directa.
-                  </p>
                   <form
-                    className="grid gap-3 px-4 md:grid-cols-[1fr_1fr_auto]"
+                    className="flex flex-wrap gap-3 px-4"
                     onSubmit={(event) => {
                       event.preventDefault()
                       const form = event.currentTarget
                       const data = new FormData(form)
                       void submit(async () => {
                         await request('/admin/stages', {
-                          name: data.get('name'),
                           kind: data.get('kind'),
                           championshipId,
                         })
                         await refreshStages()
-                      }, form)
+                      })
                     }}
                   >
-                    <input
-                      className="input input-bordered w-full"
-                      name="name"
-                      placeholder="Nombre de la etapa"
-                      maxLength={100}
-                      required
-                    />
                     <select
-                      className="select-bordered select w-full"
+                      className="select-bordered select min-w-48 flex-1"
                       name="kind"
                       required
+                      disabled={availableStageKinds.length === 0}
                     >
-                      <option value="GROUP">Grupos</option>
-                      <option value="LEAGUE">Liga</option>
-                      <option value="KNOCKOUT">Eliminación directa</option>
+                      {availableStageKinds.map((kind) => (
+                        <option key={kind} value={kind}>
+                          {stageLabel(kind)}
+                        </option>
+                      ))}
                     </select>
-                    <button className="btn-outline btn" disabled={busy}>
+                    <button
+                      className="btn-outline btn"
+                      disabled={busy || availableStageKinds.length === 0}
+                    >
                       Agregar etapa <Plus className="size-4" />
                     </button>
                   </form>
@@ -989,8 +1032,7 @@ export function AdminPage({ page }: { page: AdminSection }) {
                     <ul className="list" aria-label="Etapas del campeonato">
                       {selectedStages.map((stage) => (
                         <li className="list-row items-center" key={stage.id}>
-                          <span className="font-bold">{stage.name}</span>
-                          <span className="text-base-content/60 text-sm">
+                          <span className="font-bold">
                             {stageLabel(stage.kind)}
                           </span>
                         </li>
@@ -1086,7 +1128,7 @@ export function AdminPage({ page }: { page: AdminSection }) {
                       <option value="">Sin etapa</option>
                       {selectedStages.map((stage) => (
                         <option key={stage.id} value={stage.id}>
-                          {stage.name} · {stageLabel(stage.kind)}
+                          {stageLabel(stage.kind)}
                         </option>
                       ))}
                     </select>
@@ -1174,7 +1216,9 @@ export function AdminPage({ page }: { page: AdminSection }) {
                         </p>
                         <p className="text-base-content/50 mt-1 text-xs">
                           {match.championship.name}
-                          {match.stage ? ` / ${match.stage.name}` : ''}
+                          {match.stage
+                            ? ` / ${stageLabel(match.stage.kind)}`
+                            : ''}
                         </p>
                       </div>
                       <span className="text-xl font-black tabular-nums">
@@ -1260,7 +1304,7 @@ export function AdminPage({ page }: { page: AdminSection }) {
                             )
                             .map((stage) => (
                               <option key={stage.id} value={stage.id}>
-                                {stage.name} · {stageLabel(stage.kind)}
+                                {stageLabel(stage.kind)}
                               </option>
                             ))}
                         </select>

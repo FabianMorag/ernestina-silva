@@ -59,7 +59,7 @@ function ChampionshipList({
                 <span>
                   <CalendarDays aria-hidden="true" />{' '}
                   {championship.stages
-                    .map((stage) => `${stage.name} · ${stageLabel(stage.kind)}`)
+                    .map((stage) => stageLabel(stage.kind))
                     .join(' / ')}
                 </span>
               )}
@@ -93,7 +93,7 @@ function MatchList({ matches }: { matches: Match[] }) {
         <article className="public-match-row" key={match.id}>
           <div className="public-match-context">
             <span>{match.championship.name}</span>
-            {match.stage && <span>{match.stage.name}</span>}
+            {match.stage && <span>{stageLabel(match.stage.kind)}</span>}
           </div>
           <div className="public-match-score">
             <span>{match.homePlayer.name}</span>

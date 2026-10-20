@@ -15,8 +15,8 @@ const input = {
 describe('TournamentController', () => {
   const prisma = {
     $transaction: vi.fn(),
-    championship: { findUnique: vi.fn() },
-    stage: { findUnique: vi.fn() },
+    championship: { findUnique: vi.fn(), create: vi.fn() },
+    stage: { findUnique: vi.fn(), create: vi.fn() },
     player: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     team: { findUnique: vi.fn(), update: vi.fn() },
     championshipParticipant: { findUnique: vi.fn(), findMany: vi.fn(), upsert: vi.fn() },
@@ -27,7 +27,9 @@ describe('TournamentController', () => {
     vi.clearAllMocks();
     prisma.$transaction.mockImplementation(async (work) => work(prisma));
     prisma.championship.findUnique.mockResolvedValue({ id: 'championship' });
+    prisma.championship.create.mockResolvedValue({ id: 'championship' });
     prisma.stage.findUnique.mockResolvedValue({ id: 'stage', championshipId: 'championship' });
+    prisma.stage.create.mockResolvedValue({ id: 'stage', kind: 'GROUP', championshipId: 'championship' });
     prisma.player.findUnique.mockImplementation(async ({ where }) => ({ id: where.id }));
     prisma.team.findUnique.mockImplementation(async ({ where }) => ({ id: where.id }));
     prisma.match.create.mockResolvedValue({ id: 'match' });
@@ -44,6 +46,43 @@ describe('TournamentController', () => {
     const controller = new TournamentController(prisma as never);
     await expect(controller.createMatch(input)).resolves.toEqual({ id: 'match' });
     expect(prisma.match.create).toHaveBeenCalledWith({ data: input });
+  });
+
+  it('creates a championship with its selected fixed stages', async () => {
+    await expect(new TournamentController(prisma as never).createChampionship({
+      name: ' Copa ', stageKinds: ['GROUP', 'KNOCKOUT'],
+    })).resolves.toEqual({ id: 'championship' });
+    expect(prisma.championship.create).toHaveBeenCalledWith({
+      data: { name: 'Copa', stages: { create: [{ kind: 'GROUP' }, { kind: 'KNOCKOUT' }] } },
+    });
+  });
+
+  it('requires at least one valid, non-repeated stage type before creating a championship', () => {
+    const controller = new TournamentController(prisma as never);
+    for (const stageKinds of [[], ['GROUP', 'GROUP'], ['OTHER'], 'GROUP']) {
+      expect(() => controller.createChampionship({ name: 'Copa', stageKinds })).toThrow(BadRequestException);
+    }
+    expect(prisma.championship.create).not.toHaveBeenCalled();
+  });
+
+  it('adds a missing fixed stage to an existing championship without a name', async () => {
+    const controller = new TournamentController(prisma as never);
+    await expect(controller.createStage({ kind: 'GROUP', championshipId: 'championship' })).resolves.toEqual({
+      id: 'stage', kind: 'GROUP', championshipId: 'championship',
+    });
+    expect(prisma.stage.create).toHaveBeenCalledWith({ data: { kind: 'GROUP', championshipId: 'championship' } });
+  });
+
+  it('rejects a repeated stage kind for an existing championship', async () => {
+    prisma.stage.create.mockRejectedValue({ code: 'P2002' });
+    await expect(new TournamentController(prisma as never).createStage({
+      kind: 'GROUP', championshipId: 'championship',
+    })).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('rejects an empty stage request with a client error', async () => {
+    await expect(new TournamentController(prisma as never).createStage(null as never)).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.stage.create).not.toHaveBeenCalled();
   });
 
   it('deletes only the selected match', async () => {
