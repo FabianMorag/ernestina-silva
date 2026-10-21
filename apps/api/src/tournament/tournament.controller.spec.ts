@@ -17,6 +17,7 @@ describe('TournamentController', () => {
     $transaction: vi.fn(),
     championship: { findUnique: vi.fn(), create: vi.fn() },
     stage: { findUnique: vi.fn(), create: vi.fn() },
+    stageGroup: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn() },
     player: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     team: { findUnique: vi.fn(), update: vi.fn() },
     championshipParticipant: { findUnique: vi.fn(), findMany: vi.fn(), upsert: vi.fn() },
@@ -28,12 +29,13 @@ describe('TournamentController', () => {
     prisma.$transaction.mockImplementation(async (work) => work(prisma));
     prisma.championship.findUnique.mockResolvedValue({ id: 'championship' });
     prisma.championship.create.mockResolvedValue({ id: 'championship' });
-    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', championshipId: 'championship' });
+    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'LEAGUE', championshipId: 'championship' });
     prisma.stage.create.mockResolvedValue({ id: 'stage', kind: 'GROUP', championshipId: 'championship' });
+    prisma.stageGroup.findUnique.mockResolvedValue({ id: 'group-a', stageId: 'stage' });
     prisma.player.findUnique.mockImplementation(async ({ where }) => ({ id: where.id }));
     prisma.team.findUnique.mockImplementation(async ({ where }) => ({ id: where.id }));
     prisma.match.create.mockResolvedValue({ id: 'match' });
-    prisma.match.findUnique.mockResolvedValue({ id: 'match', championshipId: 'championship' });
+    prisma.match.findUnique.mockResolvedValue({ id: 'match', championshipId: 'championship', stageId: 'stage', groupId: null });
     prisma.match.updateMany.mockResolvedValue({ count: 1 });
     prisma.championshipParticipant.findUnique.mockImplementation(async ({ where }) => ({
       championshipId: where.championshipId_playerId.championshipId,
@@ -45,7 +47,75 @@ describe('TournamentController', () => {
   it('persists a match between two registered players with their teams', async () => {
     const controller = new TournamentController(prisma as never);
     await expect(controller.createMatch(input)).resolves.toEqual({ id: 'match' });
-    expect(prisma.match.create).toHaveBeenCalledWith({ data: input });
+    expect(prisma.match.create).toHaveBeenCalledWith({ data: { ...input, groupId: null } });
+  });
+
+  it('creates a named group only inside a GROUP stage', async () => {
+    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'GROUP', championshipId: 'championship' });
+    prisma.stageGroup.create.mockResolvedValue({ id: 'group-a', stageId: 'stage', name: 'A' });
+    await expect(new TournamentController(prisma as never).createStageGroup({ stageId: 'stage', name: ' A ' }))
+      .resolves.toMatchObject({ name: 'A' });
+    expect(prisma.stageGroup.create).toHaveBeenCalledWith({ data: { stageId: 'stage', name: 'A' } });
+  });
+
+  it('rejects group creation outside a GROUP stage', async () => {
+    await expect(new TournamentController(prisma as never).createStageGroup({ stageId: 'stage', name: 'A' }))
+      .rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.stageGroup.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a duplicate group name', async () => {
+    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'GROUP', championshipId: 'championship' });
+    prisma.stageGroup.create.mockRejectedValue({ code: 'P2002' });
+    await expect(new TournamentController(prisma as never).createStageGroup({ stageId: 'stage', name: 'A' }))
+      .rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('requires a matching group for a new GROUP-stage match', async () => {
+    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'GROUP', championshipId: 'championship' });
+    await expect(new TournamentController(prisma as never).createMatch(input)).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.match.create).not.toHaveBeenCalled();
+    await expect(new TournamentController(prisma as never).createMatch({ ...input, groupId: 'group-a' }))
+      .resolves.toEqual({ id: 'match' });
+    expect(prisma.match.create).toHaveBeenCalledWith({ data: { ...input, groupId: 'group-a' } });
+  });
+
+  it('rejects a group from another stage without saving a match', async () => {
+    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'GROUP', championshipId: 'championship' });
+    prisma.stageGroup.findUnique.mockResolvedValue({ id: 'group-a', stageId: 'other-stage' });
+    await expect(new TournamentController(prisma as never).createMatch({ ...input, groupId: 'group-a' }))
+      .rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.match.create).not.toHaveBeenCalled();
+  });
+
+  it('assigns a matching group when correcting a historical GROUP-stage match', async () => {
+    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'GROUP', championshipId: 'championship' });
+    await new TournamentController(prisma as never).updateMatch('match', {
+      stageId: 'stage', groupId: 'group-a', homeScore: 4, awayScore: 1,
+    });
+    expect(prisma.match.updateMany).toHaveBeenCalledWith({
+      where: { id: 'match' },
+      data: { stageId: 'stage', groupId: 'group-a', homeScore: 4, awayScore: 1 },
+    });
+  });
+
+  it('preserves a group when an older editor updates only scores', async () => {
+    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'GROUP', championshipId: 'championship' });
+    prisma.match.findUnique.mockResolvedValue({ id: 'match', championshipId: 'championship', stageId: 'stage', groupId: 'group-a' });
+    await new TournamentController(prisma as never).updateMatch('match', { stageId: 'stage', homeScore: 4, awayScore: 1 });
+    expect(prisma.match.updateMany).toHaveBeenCalledWith({
+      where: { id: 'match' },
+      data: { stageId: 'stage', groupId: 'group-a', homeScore: 4, awayScore: 1 },
+    });
+  });
+
+  it('rejects an edited group from another stage without changing the match', async () => {
+    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'GROUP', championshipId: 'championship' });
+    prisma.stageGroup.findUnique.mockResolvedValue({ id: 'group-a', stageId: 'other-stage' });
+    await expect(new TournamentController(prisma as never).updateMatch('match', {
+      stageId: 'stage', groupId: 'group-a', homeScore: 4, awayScore: 1,
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.match.updateMany).not.toHaveBeenCalled();
   });
 
   it('creates a championship with its selected fixed stages', async () => {
@@ -101,7 +171,7 @@ describe('TournamentController', () => {
     })).resolves.toEqual({ updated: true });
     expect(prisma.match.updateMany).toHaveBeenCalledWith({
       where: { id: 'match' },
-      data: { stageId: 'stage', homeScore: 4, awayScore: 1 },
+      data: { stageId: 'stage', groupId: null, homeScore: 4, awayScore: 1 },
     });
   });
 
@@ -111,7 +181,7 @@ describe('TournamentController', () => {
     });
     expect(prisma.match.updateMany).toHaveBeenCalledWith({
       where: { id: 'match' },
-      data: { stageId: null, homeScore: 3, awayScore: 2 },
+      data: { stageId: null, groupId: null, homeScore: 3, awayScore: 2 },
     });
     expect(prisma.stage.findUnique).not.toHaveBeenCalled();
   });

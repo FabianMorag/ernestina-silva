@@ -22,6 +22,7 @@ describe('AppController (e2e)', () => {
         team: { findMany: async () => [] },
         championship: { findMany: async () => [] },
         stage: { findMany: async () => [] },
+        stageGroup: { findMany: async () => [] },
         match: { findMany: async () => [] },
       })
       .overrideProvider(AuthService)
@@ -89,7 +90,7 @@ describe('AppController (e2e)', () => {
   });
 
   it('allows anonymous tournament reads but rejects anonymous writes', async () => {
-    for (const resource of ['players', 'teams', 'championships', 'stages', 'matches']) {
+    for (const resource of ['players', 'teams', 'championships', 'stages', 'groups', 'matches']) {
       const response = await app.inject({ method: 'GET', url: `/tournament/${resource}` });
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual([]);

@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 export type MatchInput = {
   championshipId: string;
   stageId: string | null;
+  groupId: string | null;
   homePlayerId: string;
   awayPlayerId: string;
   homeTeamId: string;
@@ -23,6 +24,9 @@ export function parseMatchInput(value: unknown): MatchInput {
   if (input.stageId != null && (typeof input.stageId !== 'string' || !input.stageId)) {
     throw new BadRequestException('stageId must be an identifier');
   }
+  if (input.groupId != null && (typeof input.groupId !== 'string' || !input.groupId)) {
+    throw new BadRequestException('groupId must be an identifier');
+  }
   if (input.homePlayerId === input.awayPlayerId) {
     throw new BadRequestException('A player cannot play against themselves');
   }
@@ -34,6 +38,7 @@ export function parseMatchInput(value: unknown): MatchInput {
   return {
     championshipId: input.championshipId as string,
     stageId: (input.stageId as string | null) ?? null,
+    groupId: (input.groupId as string | null) ?? null,
     homePlayerId: input.homePlayerId as string,
     awayPlayerId: input.awayPlayerId as string,
     homeTeamId: input.homeTeamId as string,

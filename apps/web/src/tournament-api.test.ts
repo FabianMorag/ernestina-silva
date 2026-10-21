@@ -1,6 +1,24 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { deleteRequest, patchRequest, request } from './tournament-api.ts'
+import {
+  deleteRequest,
+  groupsForStage,
+  patchRequest,
+  request,
+} from './tournament-api.ts'
+
+test('group choices include only groups from the selected stage', () => {
+  assert.deepEqual(
+    groupsForStage(
+      [
+        { id: 'a', stageId: 'group-stage', name: 'A' },
+        { id: 'b', stageId: 'other-stage', name: 'B' },
+      ],
+      'group-stage',
+    ).map((group) => group.name),
+    ['A'],
+  )
+})
 
 test('DELETE removes the selected match with the admin session', async () => {
   const calls: Array<{ url: string; options: RequestInit }> = []

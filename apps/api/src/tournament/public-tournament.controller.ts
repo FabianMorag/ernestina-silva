@@ -21,10 +21,15 @@ export class PublicTournamentController {
     return this.prisma.stage.findMany({ include: { championship: true }, orderBy: { kind: 'asc' } });
   }
 
+  @Get('groups')
+  groups() {
+    return this.prisma.stageGroup.findMany({ orderBy: { name: 'asc' } });
+  }
+
   @Get('matches')
   matches() {
     return this.prisma.match.findMany({
-      include: { championship: true, stage: true, homePlayer: true, awayPlayer: true, homeTeam: true, awayTeam: true },
+      include: { championship: true, stage: true, group: true, homePlayer: true, awayPlayer: true, homeTeam: true, awayTeam: true },
       orderBy: { createdAt: 'desc' },
     });
   }

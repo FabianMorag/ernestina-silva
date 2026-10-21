@@ -2,10 +2,11 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { resetMatchFormKeepingContext } from './match-form.ts'
 
-test('resetting a match keeps its championship and stage but clears the next result', () => {
+test('resetting a match keeps its championship, stage and group but clears the next result', () => {
   const controls = {
     championshipId: { value: 'cup' },
     stageId: { value: 'semifinal' },
+    groupId: { value: 'group-a' },
     homePlayerId: { value: 'home' },
     awayPlayerId: { value: 'away' },
     homeScore: { value: '2' },
@@ -27,6 +28,7 @@ test('resetting a match keeps its championship and stage but clears the next res
 
   assert.equal(controls.championshipId.value, 'cup')
   assert.equal(controls.stageId.value, 'semifinal')
+  assert.equal(controls.groupId.value, 'group-a')
   assert.equal(controls.homePlayerId.value, '')
   assert.equal(controls.awayPlayerId.value, '')
   assert.equal(controls.homeScore.value, '')

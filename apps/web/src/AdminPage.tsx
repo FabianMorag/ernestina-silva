@@ -25,12 +25,14 @@ import {
   deleteRequest,
   patchRequest,
   request,
+  groupsForStage,
   stageLabel,
   type Item,
   type Match,
   type Participant,
   type Player,
   type Stage,
+  type StageGroup,
 } from './tournament-api.ts'
 
 const adminLinks = [
@@ -182,6 +184,10 @@ export function AdminPage({ page }: { page: AdminSection }) {
     signedIn ? '/admin/stages' : null,
     request,
   )
+  const { data: groups = [], mutate: refreshGroups } = useSWR<StageGroup[]>(
+    signedIn ? '/admin/groups' : null,
+    request,
+  )
   const { data: matches = [], mutate: refreshMatches } = useSWR<Match[]>(
     signedIn ? '/admin/matches' : null,
     request,
@@ -202,6 +208,8 @@ export function AdminPage({ page }: { page: AdminSection }) {
   const teamDialogRef = useRef<HTMLDialogElement>(null)
   const teamDialogTrigger = useRef<HTMLElement | null>(null)
   const [matchToEdit, setMatchToEdit] = useState<Match | null>(null)
+  const [matchStageId, setMatchStageId] = useState('')
+  const [editStageId, setEditStageId] = useState('')
   const editMatchDialogRef = useRef<HTMLDialogElement>(null)
   const editMatchDialogTrigger = useRef<HTMLElement | null>(null)
   const [matchToDelete, setMatchToDelete] = useState<Match | null>(null)
@@ -268,6 +276,7 @@ export function AdminPage({ page }: { page: AdminSection }) {
           ? document.activeElement
           : null
     setError('')
+    setEditStageId(next?.stage?.id ?? '')
     setMatchToEdit(next)
   }
 
@@ -409,6 +418,16 @@ export function AdminPage({ page }: { page: AdminSection }) {
   const selectedStages = stages.filter(
     (stage) => stage.championshipId === championshipId,
   )
+  const groupStage = selectedStages.find((stage) => stage.kind === 'GROUP')
+  const effectiveMatchStageId = selectedStages.some(
+    (stage) => stage.id === matchStageId,
+  )
+    ? matchStageId
+    : ''
+  const matchStage = selectedStages.find(
+    (stage) => stage.id === effectiveMatchStageId,
+  )
+  const editStage = stages.find((stage) => stage.id === editStageId)
   const availableStageKinds = (['GROUP', 'LEAGUE', 'KNOCKOUT'] as const).filter(
     (kind) => !selectedStages.some((stage) => stage.kind === kind),
   )
@@ -1039,6 +1058,43 @@ export function AdminPage({ page }: { page: AdminSection }) {
                       ))}
                     </ul>
                   )}
+                  {groupStage && (
+                    <div className="space-y-3 px-4">
+                      <h4 className="font-semibold">Grupos</h4>
+                      <form
+                        className="flex flex-wrap gap-3"
+                        onSubmit={(event) => {
+                          event.preventDefault()
+                          const form = event.currentTarget
+                          const name = new FormData(form).get('name')
+                          void submit(async () => {
+                            await request('/admin/groups', {
+                              stageId: groupStage.id,
+                              name,
+                            })
+                            await refreshGroups()
+                          }, form)
+                        }}
+                      >
+                        <input
+                          className="input input-bordered w-36"
+                          name="name"
+                          maxLength={30}
+                          placeholder="A, B, C…"
+                          aria-label="Nombre del grupo"
+                          required
+                        />
+                        <button className="btn btn-outline" disabled={busy}>
+                          Agregar grupo <Plus className="size-4" />
+                        </button>
+                      </form>
+                      <p className="text-base-content/60 text-sm">
+                        {groupsForStage(groups, groupStage.id)
+                          .map((group) => `Grupo ${group.name}`)
+                          .join(' · ') || 'Todavía no hay grupos.'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </section>
             )}
@@ -1078,6 +1134,7 @@ export function AdminPage({ page }: { page: AdminSection }) {
                       await request('/admin/matches', {
                         championshipId,
                         stageId: data.get('stageId') || null,
+                        groupId: data.get('groupId') || null,
                         homePlayerId: home.playerId,
                         awayPlayerId: away.playerId,
                         homeTeamId: home.teamId,
@@ -1124,6 +1181,8 @@ export function AdminPage({ page }: { page: AdminSection }) {
                       className="select-bordered select w-full"
                       name="stageId"
                       key={championshipId}
+                      value={effectiveMatchStageId}
+                      onChange={(event) => setMatchStageId(event.target.value)}
                     >
                       <option value="">Sin etapa</option>
                       {selectedStages.map((stage) => (
@@ -1133,6 +1192,29 @@ export function AdminPage({ page }: { page: AdminSection }) {
                       ))}
                     </select>
                   </label>
+                  {matchStage?.kind === 'GROUP' && (
+                    <label className="flex min-w-0 flex-col gap-2">
+                      <span className="text-sm font-medium">Grupo</span>
+                      <select
+                        className="select select-bordered w-full"
+                        name="groupId"
+                        key={effectiveMatchStageId}
+                        required
+                        defaultValue=""
+                      >
+                        <option value="" disabled>
+                          Selecciona un grupo
+                        </option>
+                        {groupsForStage(groups, effectiveMatchStageId).map(
+                          (group) => (
+                            <option key={group.id} value={group.id}>
+                              Grupo {group.name}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </label>
+                  )}
                   {(
                     [
                       ['Local', 'home'],
@@ -1219,6 +1301,7 @@ export function AdminPage({ page }: { page: AdminSection }) {
                           {match.stage
                             ? ` / ${stageLabel(match.stage.kind)}`
                             : ''}
+                          {match.group ? ` / Grupo ${match.group.name}` : ''}
                         </p>
                       </div>
                       <span className="text-xl font-black tabular-nums">
@@ -1280,6 +1363,7 @@ export function AdminPage({ page }: { page: AdminSection }) {
                         void submit(async () => {
                           await patchRequest(`/admin/matches/${matchId}`, {
                             stageId: data.get('stageId') || null,
+                            groupId: data.get('groupId') || null,
                             homeScore: Number(data.get('homeScore')),
                             awayScore: Number(data.get('awayScore')),
                           })
@@ -1293,7 +1377,10 @@ export function AdminPage({ page }: { page: AdminSection }) {
                         <select
                           className="select select-bordered w-full"
                           name="stageId"
-                          defaultValue={matchToEdit.stage?.id ?? ''}
+                          value={editStageId}
+                          onChange={(event) =>
+                            setEditStageId(event.target.value)
+                          }
                         >
                           <option value="">Sin etapa</option>
                           {stages
@@ -1309,6 +1396,33 @@ export function AdminPage({ page }: { page: AdminSection }) {
                             ))}
                         </select>
                       </label>
+                      {editStage?.kind === 'GROUP' && (
+                        <label className="flex flex-col gap-2">
+                          <span className="text-sm font-medium">Grupo</span>
+                          <select
+                            className="select select-bordered w-full"
+                            name="groupId"
+                            key={`${matchToEdit.id}-${editStageId}`}
+                            defaultValue={
+                              matchToEdit.stage?.id === editStageId
+                                ? (matchToEdit.group?.id ?? '')
+                                : ''
+                            }
+                            required
+                          >
+                            <option value="" disabled>
+                              Selecciona un grupo
+                            </option>
+                            {groupsForStage(groups, editStageId).map(
+                              (group) => (
+                                <option key={group.id} value={group.id}>
+                                  Grupo {group.name}
+                                </option>
+                              ),
+                            )}
+                          </select>
+                        </label>
+                      )}
                       <div className="grid gap-4 sm:grid-cols-2">
                         <label className="flex flex-col gap-2">
                           <span className="text-sm font-medium">

@@ -94,6 +94,7 @@ function MatchList({ matches }: { matches: Match[] }) {
           <div className="public-match-context">
             <span>{match.championship.name}</span>
             {match.stage && <span>{stageLabel(match.stage.kind)}</span>}
+            {match.group && <span>Grupo {match.group.name}</span>}
           </div>
           <div className="public-match-score">
             <span>{match.homePlayer.name}</span>

@@ -14,7 +14,7 @@ const valid = {
 
 describe('parseMatchInput', () => {
   it('accepts two distinct registered-player identifiers and scores', () => {
-    expect(parseMatchInput(valid)).toEqual(valid);
+    expect(parseMatchInput(valid)).toEqual({ ...valid, groupId: null });
   });
 
   it('rejects a player facing themselves', () => {
@@ -24,5 +24,10 @@ describe('parseMatchInput', () => {
   it('rejects invalid scores', () => {
     expect(() => parseMatchInput({ ...valid, homeScore: -1 })).toThrow(BadRequestException);
     expect(() => parseMatchInput({ ...valid, homeScore: 1.5 })).toThrow(BadRequestException);
+  });
+
+  it('normalizes an omitted group to null and rejects invalid group identifiers', () => {
+    expect(parseMatchInput(valid)).toEqual({ ...valid, groupId: null });
+    expect(() => parseMatchInput({ ...valid, groupId: '' })).toThrow(BadRequestException);
   });
 });

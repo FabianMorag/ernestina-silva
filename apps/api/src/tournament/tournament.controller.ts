@@ -141,6 +141,29 @@ export class TournamentController {
     return this.prisma.stage.findMany({ include: { championship: true }, orderBy: { kind: 'asc' } });
   }
 
+  @Get('groups')
+  groups() {
+    return this.prisma.stageGroup.findMany({ orderBy: { name: 'asc' } });
+  }
+
+  @Post('groups')
+  async createStageGroup(@Body() body: { stageId?: unknown; name?: unknown }) {
+    if (typeof body?.stageId !== 'string' || !body.stageId ||
+      typeof body?.name !== 'string' || !body.name.trim() || body.name.trim().length > 30) {
+      throw new BadRequestException('A stage and group name of 1 to 30 characters are required');
+    }
+    const stage = await this.prisma.stage.findUnique({ where: { id: body.stageId } });
+    if (!stage || stage.kind !== StageKind.GROUP) {
+      throw new BadRequestException('Groups require a group stage');
+    }
+    try {
+      return await this.prisma.stageGroup.create({ data: { stageId: body.stageId, name: body.name.trim() } });
+    } catch (error) {
+      if ((error as { code?: unknown })?.code === 'P2002') throw new ConflictException('Group name already exists in stage');
+      throw error;
+    }
+  }
+
   @Post('stages')
   async createStage(@Body() body: { kind?: unknown; championshipId?: unknown }) {
     if (typeof body?.championshipId !== 'string' || !Object.values(StageKind).includes(body.kind as StageKind)) {
@@ -159,7 +182,7 @@ export class TournamentController {
   @Get('matches')
   matches() {
     return this.prisma.match.findMany({
-      include: { championship: true, stage: true, homePlayer: true, awayPlayer: true, homeTeam: true, awayTeam: true },
+      include: { championship: true, stage: true, group: true, homePlayer: true, awayPlayer: true, homeTeam: true, awayTeam: true },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -177,30 +200,47 @@ export class TournamentController {
       throw new BadRequestException('Stage and scores are required');
     }
     const input = body as Record<string, unknown>;
-    const allowed = ['stageId', 'homeScore', 'awayScore'];
-    if (Object.keys(input).length !== allowed.length || Object.keys(input).some((key) => !allowed.includes(key))) {
-      throw new BadRequestException('Only stage and scores can be edited');
+    const allowed = ['stageId', 'groupId', 'homeScore', 'awayScore'];
+    if (Object.keys(input).some((key) => !allowed.includes(key)) ||
+      !['stageId', 'homeScore', 'awayScore'].every((key) => key in input)) {
+      throw new BadRequestException('Only stage, group and scores can be edited');
     }
     if (input.stageId !== null && (typeof input.stageId !== 'string' || !input.stageId)) {
       throw new BadRequestException('stageId must be an identifier or null');
+    }
+    if (input.groupId != null && (typeof input.groupId !== 'string' || !input.groupId)) {
+      throw new BadRequestException('groupId must be an identifier or null');
     }
     for (const key of ['homeScore', 'awayScore'] as const) {
       if (!Number.isInteger(input[key]) || (input[key] as number) < 0) {
         throw new BadRequestException(`${key} must be a non-negative integer`);
       }
     }
-    const match = await this.prisma.match.findUnique({ where: { id }, select: { championshipId: true } });
+    const match = await this.prisma.match.findUnique({ where: { id }, select: { championshipId: true, stageId: true, groupId: true } });
     if (!match) throw new NotFoundException('Match not found');
+    let stage = null;
     if (input.stageId !== null) {
-      const stage = await this.prisma.stage.findUnique({ where: { id: input.stageId as string } });
+      stage = await this.prisma.stage.findUnique({ where: { id: input.stageId as string } });
       if (!stage || stage.championshipId !== match.championshipId) {
         throw new BadRequestException('Stage must belong to the championship');
       }
+    }
+    const groupId = 'groupId' in input
+      ? input.groupId as string | null
+      : match.stageId === input.stageId ? match.groupId : null;
+    if (groupId) {
+      const group = await this.prisma.stageGroup.findUnique({ where: { id: groupId } });
+      if (!stage || stage.kind !== StageKind.GROUP || group?.stageId !== stage.id) {
+        throw new BadRequestException('Group must belong to the selected group stage');
+      }
+    } else if (stage?.kind === StageKind.GROUP && ('groupId' in input || match.stageId !== stage.id)) {
+      throw new BadRequestException('A group is required for a group-stage match');
     }
     const { count } = await this.prisma.match.updateMany({
       where: { id },
       data: {
         stageId: input.stageId as string | null,
+        groupId,
         homeScore: input.homeScore as number,
         awayScore: input.awayScore as number,
       },
@@ -214,9 +254,10 @@ export class TournamentController {
     const input = parseMatchInput(body);
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const [championship, stage, homePlayer, awayPlayer, homeTeam, awayTeam] = await Promise.all([
+        const [championship, stage, group, homePlayer, awayPlayer, homeTeam, awayTeam] = await Promise.all([
           tx.championship.findUnique({ where: { id: input.championshipId } }),
           input.stageId ? tx.stage.findUnique({ where: { id: input.stageId } }) : null,
+          input.groupId ? tx.stageGroup.findUnique({ where: { id: input.groupId } }) : null,
           tx.player.findUnique({ where: { id: input.homePlayerId } }),
           tx.player.findUnique({ where: { id: input.awayPlayerId } }),
           tx.team.findUnique({ where: { id: input.homeTeamId } }),
@@ -227,6 +268,12 @@ export class TournamentController {
         }
         if (input.stageId && (!stage || stage.championshipId !== input.championshipId)) {
           throw new BadRequestException('Stage must belong to the championship');
+        }
+        if (stage?.kind === StageKind.GROUP && !input.groupId) {
+          throw new BadRequestException('A group is required for a group-stage match');
+        }
+        if (input.groupId && (!stage || stage.kind !== StageKind.GROUP || group?.stageId !== stage.id)) {
+          throw new BadRequestException('Group must belong to the selected group stage');
         }
         const [homeAssignment, awayAssignment] = await Promise.all([
           tx.championshipParticipant.findUnique({ where: { championshipId_playerId: { championshipId: input.championshipId, playerId: input.homePlayerId } } }),

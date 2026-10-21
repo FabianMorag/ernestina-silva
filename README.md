@@ -37,7 +37,11 @@ The seed is safe to rerun: fixed player and team IDs prevent duplicates, and exi
 
 With `ENABLE_LOCAL_ADMIN=true` in the API `.env`, an empty local database gets a temporary `admin` / `admin` account. This account cannot sign in when `NODE_ENV=production`, even if the database is reused. Public pages at `/`, `/partidos`, and `/campeonatos` require no account. Sign in at `/admin` to manage the tournament. The admin has separate pages for players (`/admin/jugadores`), teams (`/admin/equipos`), championships (`/admin/campeonatos`), and match results (`/admin/partidos`). Create a championship with at least one of the three stage types (groups, league, or knockout), then select it to enroll participating players and assign each a team. Existing championships can add any missing stage type without a custom stage name. The match form offers only players enrolled in the selected championship and uses their assigned teams. A player can have another team in a later championship. Do not use the temporary account for deployed environments.
 
+For a group stage, add named groups (such as A and B) on the championship admin page. New group-stage matches require one of those groups; the match editor can assign a group to older matches, which remain unassigned after migration. Both admin and public match lists show the group when one is assigned.
+
 Public read-only API routes are `GET /tournament/players`, `/tournament/teams`, `/tournament/championships`, `/tournament/stages`, and `/tournament/matches`. Data-entry routes remain under `/admin/*` and require an admin session. Player edits use `PATCH /admin/players/:id`; championship assignments use `GET` and `POST /admin/participants`.
+
+Group definitions are available at `GET /tournament/groups` and `GET /admin/groups`; admins add them with `POST /admin/groups` (`stageId`, `name`). Match creation and correction accept `groupId` alongside `stageId`; the API validates that the group belongs to the selected group stage.
 
 In Swagger UI at `http://localhost:3000/docs`, open `POST /auth/login`, select **Try it out**, enter the local credentials, and execute. The browser stores the HttpOnly session cookie; subsequent protected requests in the same Swagger tab use that session. Do not enter the cookie manually in **Authorize**: browsers do not let Swagger UI set the `Cookie` header.
 

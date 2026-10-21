@@ -77,8 +77,19 @@ model Stage {
   championshipId String
   championship   Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
   matches        Match[]
+  groups         StageGroup[]
 
   @@unique([championshipId, kind])
+}
+
+model StageGroup {
+  id      String  @id @default(cuid())
+  name    String
+  stageId String
+  stage   Stage   @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  matches Match[]
+
+  @@unique([stageId, name])
 }
 
 model Match {
@@ -88,12 +99,14 @@ model Match {
   awayScore      Int
   championshipId String
   stageId        String?
+  groupId        String?
   homePlayerId   String
   awayPlayerId   String
   homeTeamId     String
   awayTeamId     String
   championship   Championship @relation(fields: [championshipId], references: [id])
   stage          Stage?       @relation(fields: [stageId], references: [id])
+  group          StageGroup?  @relation(fields: [groupId], references: [id])
   homePlayer     Player       @relation("HomePlayer", fields: [homePlayerId], references: [id])
   awayPlayer     Player       @relation("AwayPlayer", fields: [awayPlayerId], references: [id])
   homeTeam       Team         @relation("HomeTeam", fields: [homeTeamId], references: [id])
@@ -102,4 +115,5 @@ model Match {
 
   @@index([championshipId])
   @@index([stageId])
+  @@index([groupId])
 }

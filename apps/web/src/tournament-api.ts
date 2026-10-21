@@ -13,6 +13,7 @@ export type Stage = {
   kind: 'GROUP' | 'LEAGUE' | 'KNOCKOUT'
   championshipId: string
 }
+export type StageGroup = { id: string; stageId: string; name: string }
 export type Match = {
   id: string
   homeScore: number
@@ -23,6 +24,14 @@ export type Match = {
   awayTeam: Item
   championship: Item
   stage: Stage | null
+  group: StageGroup | null
+}
+
+export function groupsForStage(
+  groups: StageGroup[],
+  stageId: string,
+): StageGroup[] {
+  return groups.filter((group) => group.stageId === stageId)
 }
 
 export async function request<T>(path: string, body?: object): Promise<T> {
