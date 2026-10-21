@@ -13,6 +13,11 @@ export class PublicTournamentController {
   @Get('teams')
   teams() { return this.prisma.team.findMany({ orderBy: { name: 'asc' } }); }
 
+  @Get('participants')
+  participants() {
+    return this.prisma.championshipParticipant.findMany({ include: { player: true, team: true }, orderBy: { player: { name: 'asc' } } });
+  }
+
   @Get('championships')
   championships() { return this.prisma.championship.findMany({ orderBy: { name: 'asc' } }); }
 
