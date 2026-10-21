@@ -7,6 +7,7 @@ import {
   Trophy,
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router'
+import { homeTotalsLine, summarizeHome } from './home.ts'
 import useSWR from 'swr'
 import {
   championshipDetailPath,
@@ -128,6 +129,75 @@ function MatchList({ matches }: { matches: Match[] }) {
   )
 }
 
+function HomeView({
+  error,
+  loading,
+  championships,
+  matches,
+}: {
+  error: boolean
+  loading: boolean
+  championships: Item[]
+  matches: Match[]
+}) {
+  const summary = summarizeHome(championships, matches)
+  const ready = !loading && !error
+  return (
+    <div className="public-container public-content">
+      <div className="public-intro">
+        <div>
+          <p className="public-eyebrow">ARCHIVO PÚBLICO</p>
+          <h1>Todo el campeonato, partido a partido</h1>
+          {ready && <p>{homeTotalsLine(summary)}</p>}
+        </div>
+        <span className="public-intro-art" aria-hidden="true">
+          <Trophy />
+        </span>
+      </div>
+
+      <section className="public-board" aria-labelledby="home-latest-title">
+        <h2 id="home-latest-title">Último partido registrado</h2>
+        {error && (
+          <div className="public-message" role="alert">
+            No pudimos cargar los datos. Actualiza la página para intentarlo de
+            nuevo.
+          </div>
+        )}
+        {loading && (
+          <div className="public-message" role="status">
+            Cargando datos…
+          </div>
+        )}
+        {ready &&
+          (summary.latestRecordedMatch ? (
+            <MatchList matches={[summary.latestRecordedMatch]} />
+          ) : (
+            <p className="public-message" role="status">
+              Todavía no hay partidos registrados.
+            </p>
+          ))}
+      </section>
+
+      <div className="public-access">
+        <Link className="public-action" to="/campeonatos">
+          Ver campeonatos <ArrowRight aria-hidden="true" />
+        </Link>
+        <Link className="public-action public-action-secondary" to="/partidos">
+          Ver historial de partidos
+        </Link>
+        {ready && summary.latestChampionship && (
+          <Link
+            className="public-action public-action-secondary"
+            to={championshipDetailPath(summary.latestChampionship.id)}
+          >
+            Ver detalle de {summary.latestChampionship.name}
+          </Link>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function PublicPage({ page }: { page: PublicRoute }) {
   const [searchParams] = useSearchParams()
   const {
@@ -153,7 +223,7 @@ export function PublicPage({ page }: { page: PublicRoute }) {
     ? championships.find((item) => item.id === selectedId)
     : undefined
   const visibleMatches = matchesForChampionship(matches, selectedId)
-  const listingChampionships = page === 'home' || page === 'championships'
+  const listingChampionships = page === 'championships'
   const listing: PublicListing = listingChampionships
     ? 'championships'
     : 'matches'
@@ -206,6 +276,13 @@ export function PublicPage({ page }: { page: PublicRoute }) {
             <ArrowLeft aria-hidden="true" /> Volver al inicio
           </Link>
         </section>
+      ) : page === 'home' ? (
+        <HomeView
+          error={Boolean(error)}
+          loading={loading}
+          championships={championships}
+          matches={matches}
+        />
       ) : (
         <div className="public-container public-content">
           <div className="public-intro">

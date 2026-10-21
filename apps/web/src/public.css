@@ -416,6 +416,12 @@
 .public-board + .public-board {
   margin-top: 1.5rem;
 }
+.public-access {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
 .public-detail-section h3 {
   vertical-align: middle;
 }
