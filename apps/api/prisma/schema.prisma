@@ -100,6 +100,8 @@ model Match {
   championshipId String
   stageId        String?
   groupId        String?
+  knockoutRound  Int?
+  knockoutSlot   Int?
   homePlayerId   String
   awayPlayerId   String
   homeTeamId     String
@@ -116,4 +118,5 @@ model Match {
   @@index([championshipId])
   @@index([stageId])
   @@index([groupId])
+  @@unique([stageId, knockoutRound, knockoutSlot])
 }

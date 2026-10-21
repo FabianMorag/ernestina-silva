@@ -3,7 +3,7 @@ import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 import { StageKind } from '../generated/prisma/enums.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { parseMatchInput } from './match-input.js';
+import { parseKnockoutPlacement, parseMatchInput } from './match-input.js';
 
 function nameFrom(value: unknown): string {
   const name = (value as { name?: unknown } | null)?.name;
@@ -187,7 +187,7 @@ export class TournamentController {
         if (!stage) throw new NotFoundException('Stage not found');
         const stageMatches = await tx.match.updateMany({
           where: { stageId: id },
-          data: { stageId: null, groupId: null },
+          data: { stageId: null, groupId: null, knockoutRound: null, knockoutSlot: null },
         });
         const groupMatches = await tx.match.updateMany({
           where: { group: { stageId: id } },
@@ -226,7 +226,7 @@ export class TournamentController {
       throw new BadRequestException('Stage and scores are required');
     }
     const input = body as Record<string, unknown>;
-    const allowed = ['stageId', 'groupId', 'homeScore', 'awayScore'];
+    const allowed = ['stageId', 'groupId', 'knockoutRound', 'knockoutSlot', 'homeScore', 'awayScore'];
     if (Object.keys(input).some((key) => !allowed.includes(key)) ||
       !['stageId', 'homeScore', 'awayScore'].every((key) => key in input)) {
       throw new BadRequestException('Only stage, group and scores can be edited');
@@ -242,7 +242,9 @@ export class TournamentController {
         throw new BadRequestException(`${key} must be a non-negative integer`);
       }
     }
-    const match = await this.prisma.match.findUnique({ where: { id }, select: { championshipId: true, stageId: true, groupId: true } });
+    const match = await this.prisma.match.findUnique({ where: { id }, select: {
+      championshipId: true, stageId: true, groupId: true, knockoutRound: true, knockoutSlot: true,
+    } });
     if (!match) throw new NotFoundException('Match not found');
     let stage = null;
     if (input.stageId !== null) {
@@ -262,17 +264,33 @@ export class TournamentController {
     } else if (stage?.kind === StageKind.GROUP && ('groupId' in input || match.stageId !== stage.id)) {
       throw new BadRequestException('A group is required for a group-stage match');
     }
-    const { count } = await this.prisma.match.updateMany({
-      where: { id },
-      data: {
-        stageId: input.stageId as string | null,
-        groupId,
-        homeScore: input.homeScore as number,
-        awayScore: input.awayScore as number,
-      },
-    });
-    if (count === 0) throw new NotFoundException('Match not found');
-    return { updated: true };
+    const placement = 'knockoutRound' in input || 'knockoutSlot' in input
+      ? parseKnockoutPlacement(input.knockoutRound, input.knockoutSlot)
+      : match.stageId === input.stageId
+        ? { knockoutRound: match.knockoutRound, knockoutSlot: match.knockoutSlot }
+        : { knockoutRound: null, knockoutSlot: null };
+    if (placement.knockoutRound !== null && stage?.kind !== StageKind.KNOCKOUT) {
+      throw new BadRequestException('Knockout placement requires a knockout stage');
+    }
+    try {
+      const { count } = await this.prisma.match.updateMany({
+        where: { id },
+        data: {
+          stageId: input.stageId as string | null,
+          groupId,
+          ...placement,
+          homeScore: input.homeScore as number,
+          awayScore: input.awayScore as number,
+        },
+      });
+      if (count === 0) throw new NotFoundException('Match not found');
+      return { updated: true };
+    } catch (error) {
+      if ((error as { code?: unknown })?.code === 'P2002') {
+        throw new ConflictException('Knockout pairing is already occupied');
+      }
+      throw error;
+    }
   }
 
   @Post('matches')
@@ -301,6 +319,9 @@ export class TournamentController {
         if (input.groupId && (!stage || stage.kind !== StageKind.GROUP || group?.stageId !== stage.id)) {
           throw new BadRequestException('Group must belong to the selected group stage');
         }
+        if (input.knockoutRound !== null && stage?.kind !== StageKind.KNOCKOUT) {
+          throw new BadRequestException('Knockout placement requires a knockout stage');
+        }
         const [homeAssignment, awayAssignment] = await Promise.all([
           tx.championshipParticipant.findUnique({ where: { championshipId_playerId: { championshipId: input.championshipId, playerId: input.homePlayerId } } }),
           tx.championshipParticipant.findUnique({ where: { championshipId_playerId: { championshipId: input.championshipId, playerId: input.awayPlayerId } } }),
@@ -311,6 +332,9 @@ export class TournamentController {
         return tx.match.create({ data: input });
       }, { isolationLevel: 'Serializable' });
     } catch (error) {
+      if ((error as { code?: unknown })?.code === 'P2002') {
+        throw new ConflictException('Knockout pairing is already occupied');
+      }
       rethrowTransactionConflict(error);
     }
   }

@@ -14,7 +14,7 @@ const valid = {
 
 describe('parseMatchInput', () => {
   it('accepts two distinct registered-player identifiers and scores', () => {
-    expect(parseMatchInput(valid)).toEqual({ ...valid, groupId: null });
+    expect(parseMatchInput(valid)).toEqual({ ...valid, groupId: null, knockoutRound: null, knockoutSlot: null });
   });
 
   it('rejects a player facing themselves', () => {
@@ -27,7 +27,24 @@ describe('parseMatchInput', () => {
   });
 
   it('normalizes an omitted group to null and rejects invalid group identifiers', () => {
-    expect(parseMatchInput(valid)).toEqual({ ...valid, groupId: null });
+    expect(parseMatchInput(valid)).toEqual({ ...valid, groupId: null, knockoutRound: null, knockoutSlot: null });
     expect(() => parseMatchInput({ ...valid, groupId: '' })).toThrow(BadRequestException);
+  });
+
+  it('accepts a manually assigned knockout round and slot, and leaves older matches unplaced', () => {
+    expect(parseMatchInput({ ...valid, knockoutRound: 8, knockoutSlot: 3 }))
+      .toMatchObject({ knockoutRound: 8, knockoutSlot: 3 });
+    expect(parseMatchInput(valid)).toMatchObject({ knockoutRound: null, knockoutSlot: null });
+  });
+
+  it('rejects incomplete or invalid knockout placement', () => {
+    for (const placement of [
+      { knockoutRound: 8 },
+      { knockoutRound: 3, knockoutSlot: 1 },
+      { knockoutRound: 8, knockoutSlot: 5 },
+      { knockoutRound: 4, knockoutSlot: 0 },
+    ]) {
+      expect(() => parseMatchInput({ ...valid, ...placement })).toThrow(BadRequestException);
+    }
   });
 });

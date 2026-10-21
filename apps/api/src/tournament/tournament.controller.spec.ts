@@ -36,7 +36,7 @@ describe('TournamentController', () => {
     prisma.player.findUnique.mockImplementation(async ({ where }) => ({ id: where.id }));
     prisma.team.findUnique.mockImplementation(async ({ where }) => ({ id: where.id }));
     prisma.match.create.mockResolvedValue({ id: 'match' });
-    prisma.match.findUnique.mockResolvedValue({ id: 'match', championshipId: 'championship', stageId: 'stage', groupId: null });
+    prisma.match.findUnique.mockResolvedValue({ id: 'match', championshipId: 'championship', stageId: 'stage', groupId: null, knockoutRound: null, knockoutSlot: null });
     prisma.match.updateMany.mockResolvedValue({ count: 1 });
     prisma.championshipParticipant.findUnique.mockImplementation(async ({ where }) => ({
       championshipId: where.championshipId_playerId.championshipId,
@@ -48,7 +48,7 @@ describe('TournamentController', () => {
   it('persists a match between two registered players with their teams', async () => {
     const controller = new TournamentController(prisma as never);
     await expect(controller.createMatch(input)).resolves.toEqual({ id: 'match' });
-    expect(prisma.match.create).toHaveBeenCalledWith({ data: { ...input, groupId: null } });
+    expect(prisma.match.create).toHaveBeenCalledWith({ data: { ...input, groupId: null, knockoutRound: null, knockoutSlot: null } });
   });
 
   it('creates a named group only inside a GROUP stage', async () => {
@@ -78,7 +78,7 @@ describe('TournamentController', () => {
     expect(prisma.match.create).not.toHaveBeenCalled();
     await expect(new TournamentController(prisma as never).createMatch({ ...input, groupId: 'group-a' }))
       .resolves.toEqual({ id: 'match' });
-    expect(prisma.match.create).toHaveBeenCalledWith({ data: { ...input, groupId: 'group-a' } });
+    expect(prisma.match.create).toHaveBeenCalledWith({ data: { ...input, groupId: 'group-a', knockoutRound: null, knockoutSlot: null } });
   });
 
   it('rejects a group from another stage without saving a match', async () => {
@@ -89,6 +89,55 @@ describe('TournamentController', () => {
     expect(prisma.match.create).not.toHaveBeenCalled();
   });
 
+  it('saves an explicitly placed knockout match without creating a later match', async () => {
+    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'KNOCKOUT', championshipId: 'championship' });
+    await new TournamentController(prisma as never).createMatch({ ...input, knockoutRound: 8, knockoutSlot: 2 });
+    expect(prisma.match.create).toHaveBeenCalledExactlyOnceWith({
+      data: { ...input, groupId: null, knockoutRound: 8, knockoutSlot: 2 },
+    });
+  });
+
+  it('rejects placement outside a knockout stage', async () => {
+    await expect(new TournamentController(prisma as never).createMatch({ ...input, knockoutRound: 8, knockoutSlot: 2 }))
+      .rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.match.create).not.toHaveBeenCalled();
+  });
+
+  it('preserves placement for an older score edit and clears it when leaving knockout', async () => {
+    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'KNOCKOUT', championshipId: 'championship' });
+    prisma.match.findUnique.mockResolvedValue({ id: 'match', championshipId: 'championship', stageId: 'stage', groupId: null, knockoutRound: 8, knockoutSlot: 2 });
+    const controller = new TournamentController(prisma as never);
+    await controller.updateMatch('match', { stageId: 'stage', homeScore: 4, awayScore: 1 });
+    expect(prisma.match.updateMany).toHaveBeenLastCalledWith({
+      where: { id: 'match' },
+      data: { stageId: 'stage', groupId: null, knockoutRound: 8, knockoutSlot: 2, homeScore: 4, awayScore: 1 },
+    });
+    prisma.stage.findUnique.mockResolvedValue({ id: 'group-stage', kind: 'LEAGUE', championshipId: 'championship' });
+    await controller.updateMatch('match', { stageId: 'group-stage', homeScore: 4, awayScore: 1 });
+    expect(prisma.match.updateMany).toHaveBeenLastCalledWith({
+      where: { id: 'match' },
+      data: { stageId: 'group-stage', groupId: null, knockoutRound: null, knockoutSlot: null, homeScore: 4, awayScore: 1 },
+    });
+  });
+
+  it('assigns a legacy knockout match to a free pairing', async () => {
+    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'KNOCKOUT', championshipId: 'championship' });
+    await new TournamentController(prisma as never).updateMatch('match', {
+      stageId: 'stage', knockoutRound: 4, knockoutSlot: 1, homeScore: 4, awayScore: 1,
+    });
+    expect(prisma.match.updateMany).toHaveBeenCalledWith({
+      where: { id: 'match' },
+      data: { stageId: 'stage', groupId: null, knockoutRound: 4, knockoutSlot: 1, homeScore: 4, awayScore: 1 },
+    });
+  });
+
+  it('rejects a pairing already occupied by another knockout match', async () => {
+    prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'KNOCKOUT', championshipId: 'championship' });
+    prisma.match.create.mockRejectedValue({ code: 'P2002' });
+    await expect(new TournamentController(prisma as never).createMatch({ ...input, knockoutRound: 4, knockoutSlot: 1 }))
+      .rejects.toBeInstanceOf(ConflictException);
+  });
+
   it('assigns a matching group when correcting a historical GROUP-stage match', async () => {
     prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'GROUP', championshipId: 'championship' });
     await new TournamentController(prisma as never).updateMatch('match', {
@@ -96,17 +145,17 @@ describe('TournamentController', () => {
     });
     expect(prisma.match.updateMany).toHaveBeenCalledWith({
       where: { id: 'match' },
-      data: { stageId: 'stage', groupId: 'group-a', homeScore: 4, awayScore: 1 },
+      data: { stageId: 'stage', groupId: 'group-a', knockoutRound: null, knockoutSlot: null, homeScore: 4, awayScore: 1 },
     });
   });
 
   it('preserves a group when an older editor updates only scores', async () => {
     prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'GROUP', championshipId: 'championship' });
-    prisma.match.findUnique.mockResolvedValue({ id: 'match', championshipId: 'championship', stageId: 'stage', groupId: 'group-a' });
+    prisma.match.findUnique.mockResolvedValue({ id: 'match', championshipId: 'championship', stageId: 'stage', groupId: 'group-a', knockoutRound: null, knockoutSlot: null });
     await new TournamentController(prisma as never).updateMatch('match', { stageId: 'stage', homeScore: 4, awayScore: 1 });
     expect(prisma.match.updateMany).toHaveBeenCalledWith({
       where: { id: 'match' },
-      data: { stageId: 'stage', groupId: 'group-a', homeScore: 4, awayScore: 1 },
+      data: { stageId: 'stage', groupId: 'group-a', knockoutRound: null, knockoutSlot: null, homeScore: 4, awayScore: 1 },
     });
   });
 
@@ -155,7 +204,7 @@ describe('TournamentController', () => {
     prisma.match.updateMany.mockResolvedValueOnce({ count: 2 }).mockResolvedValueOnce({ count: 1 });
     await expect(new TournamentController(prisma as never).deleteStage('stage')).resolves.toEqual({ deleted: true, detachedMatches: 3 });
     expect(prisma.match.updateMany).toHaveBeenNthCalledWith(1, {
-      where: { stageId: 'stage' }, data: { stageId: null, groupId: null },
+      where: { stageId: 'stage' }, data: { stageId: null, groupId: null, knockoutRound: null, knockoutSlot: null },
     });
     expect(prisma.match.updateMany).toHaveBeenNthCalledWith(2, {
       where: { group: { stageId: 'stage' } }, data: { groupId: null },
@@ -204,7 +253,7 @@ describe('TournamentController', () => {
     })).resolves.toEqual({ updated: true });
     expect(prisma.match.updateMany).toHaveBeenCalledWith({
       where: { id: 'match' },
-      data: { stageId: 'stage', groupId: null, homeScore: 4, awayScore: 1 },
+      data: { stageId: 'stage', groupId: null, knockoutRound: null, knockoutSlot: null, homeScore: 4, awayScore: 1 },
     });
   });
 
@@ -214,7 +263,7 @@ describe('TournamentController', () => {
     });
     expect(prisma.match.updateMany).toHaveBeenCalledWith({
       where: { id: 'match' },
-      data: { stageId: null, groupId: null, homeScore: 3, awayScore: 2 },
+      data: { stageId: null, groupId: null, knockoutRound: null, knockoutSlot: null, homeScore: 3, awayScore: 2 },
     });
     expect(prisma.stage.findUnique).not.toHaveBeenCalled();
   });

@@ -4,6 +4,8 @@ export type MatchInput = {
   championshipId: string;
   stageId: string | null;
   groupId: string | null;
+  knockoutRound: number | null;
+  knockoutSlot: number | null;
   homePlayerId: string;
   awayPlayerId: string;
   homeTeamId: string;
@@ -11,6 +13,15 @@ export type MatchInput = {
   homeScore: number;
   awayScore: number;
 };
+
+export function parseKnockoutPlacement(round: unknown, slot: unknown): Pick<MatchInput, 'knockoutRound' | 'knockoutSlot'> {
+  if (round == null && slot == null) return { knockoutRound: null, knockoutSlot: null };
+  if (typeof round !== 'number' || ![2, 4, 8, 16, 32, 64].includes(round) ||
+    !Number.isInteger(slot) || (slot as number) < 1 || (slot as number) > round / 2) {
+    throw new BadRequestException('Knockout round and slot must identify a valid pairing');
+  }
+  return { knockoutRound: round, knockoutSlot: slot as number };
+}
 
 export function parseMatchInput(value: unknown): MatchInput {
   if (!value || typeof value !== 'object') throw new BadRequestException('Match is required');
@@ -39,6 +50,7 @@ export function parseMatchInput(value: unknown): MatchInput {
     championshipId: input.championshipId as string,
     stageId: (input.stageId as string | null) ?? null,
     groupId: (input.groupId as string | null) ?? null,
+    ...parseKnockoutPlacement(input.knockoutRound, input.knockoutSlot),
     homePlayerId: input.homePlayerId as string,
     awayPlayerId: input.awayPlayerId as string,
     homeTeamId: input.homeTeamId as string,
