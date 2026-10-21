@@ -1,0 +1,7 @@
+ALTER TABLE "Match" DROP CONSTRAINT "Match_stageId_fkey";
+ALTER TABLE "Match" ADD CONSTRAINT "Match_stageId_fkey"
+  FOREIGN KEY ("stageId") REFERENCES "Stage"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "Match" DROP CONSTRAINT "Match_groupId_fkey";
+ALTER TABLE "Match" ADD CONSTRAINT "Match_groupId_fkey"
+  FOREIGN KEY ("groupId") REFERENCES "StageGroup"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

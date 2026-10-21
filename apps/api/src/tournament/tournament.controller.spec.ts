@@ -16,7 +16,7 @@ describe('TournamentController', () => {
   const prisma = {
     $transaction: vi.fn(),
     championship: { findUnique: vi.fn(), create: vi.fn() },
-    stage: { findUnique: vi.fn(), create: vi.fn() },
+    stage: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn() },
     stageGroup: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn() },
     player: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     team: { findUnique: vi.fn(), update: vi.fn() },
@@ -31,6 +31,7 @@ describe('TournamentController', () => {
     prisma.championship.create.mockResolvedValue({ id: 'championship' });
     prisma.stage.findUnique.mockResolvedValue({ id: 'stage', kind: 'LEAGUE', championshipId: 'championship' });
     prisma.stage.create.mockResolvedValue({ id: 'stage', kind: 'GROUP', championshipId: 'championship' });
+    prisma.stage.delete.mockResolvedValue({ id: 'stage' });
     prisma.stageGroup.findUnique.mockResolvedValue({ id: 'group-a', stageId: 'stage' });
     prisma.player.findUnique.mockImplementation(async ({ where }) => ({ id: where.id }));
     prisma.team.findUnique.mockImplementation(async ({ where }) => ({ id: where.id }));
@@ -148,6 +149,38 @@ describe('TournamentController', () => {
     await expect(new TournamentController(prisma as never).createStage({
       kind: 'GROUP', championshipId: 'championship',
     })).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('detaches linked matches and deletes their stage while retaining results', async () => {
+    prisma.match.updateMany.mockResolvedValueOnce({ count: 2 }).mockResolvedValueOnce({ count: 1 });
+    await expect(new TournamentController(prisma as never).deleteStage('stage')).resolves.toEqual({ deleted: true, detachedMatches: 3 });
+    expect(prisma.match.updateMany).toHaveBeenNthCalledWith(1, {
+      where: { stageId: 'stage' }, data: { stageId: null, groupId: null },
+    });
+    expect(prisma.match.updateMany).toHaveBeenNthCalledWith(2, {
+      where: { group: { stageId: 'stage' } }, data: { groupId: null },
+    });
+    expect(prisma.stage.delete).toHaveBeenCalledWith({ where: { id: 'stage' } });
+  });
+
+  it('does not modify an unrelated stage when only its group was inconsistent', async () => {
+    prisma.match.updateMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 });
+    await new TournamentController(prisma as never).deleteStage('stage');
+    expect(prisma.match.updateMany).toHaveBeenNthCalledWith(2, {
+      where: { group: { stageId: 'stage' } }, data: { groupId: null },
+    });
+  });
+
+  it('reports an unknown stage without deleting anything', async () => {
+    prisma.stage.findUnique.mockResolvedValue(null);
+    await expect(new TournamentController(prisma as never).deleteStage('missing')).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.stage.delete).not.toHaveBeenCalled();
+  });
+
+  it('reports a concurrent match insertion instead of deleting its stage', async () => {
+    prisma.stage.delete.mockRejectedValue({ code: 'P2003' });
+    await expect(new TournamentController(prisma as never).deleteStage('stage')).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.match.updateMany).toHaveBeenCalled();
   });
 
   it('rejects an empty stage request with a client error', async () => {

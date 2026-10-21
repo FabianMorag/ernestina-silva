@@ -39,9 +39,13 @@ With `ENABLE_LOCAL_ADMIN=true` in the API `.env`, an empty local database gets a
 
 For a group stage, add named groups (such as A and B) on the championship admin page. New group-stage matches require one of those groups; the match editor can assign a group to older matches, which remain unassigned after migration. Both admin and public match lists show the group when one is assigned.
 
+An admin can remove a mistakenly added stage from the championship page. Its groups are removed, while linked matches keep their players, teams, scores, and championship; only stage and group assignments are cleared. The confirmation explains this impact before deletion.
+
 Public read-only API routes are `GET /tournament/players`, `/tournament/teams`, `/tournament/championships`, `/tournament/stages`, and `/tournament/matches`. Data-entry routes remain under `/admin/*` and require an admin session. Player edits use `PATCH /admin/players/:id`; championship assignments use `GET` and `POST /admin/participants`.
 
 Group definitions are available at `GET /tournament/groups` and `GET /admin/groups`; admins add them with `POST /admin/groups` (`stageId`, `name`). Match creation and correction accept `groupId` alongside `stageId`; the API validates that the group belongs to the selected group stage.
+
+Admins can remove a stage with `DELETE /admin/stages/:id`. The operation atomically clears stage/group assignments from linked matches and returns `detachedMatches`; a concurrent conflict rolls back the deletion.
 
 In Swagger UI at `http://localhost:3000/docs`, open `POST /auth/login`, select **Try it out**, enter the local credentials, and execute. The browser stores the HttpOnly session cookie; subsequent protected requests in the same Swagger tab use that session. Do not enter the cookie manually in **Authorize**: browsers do not let Swagger UI set the `Cookie` header.
 

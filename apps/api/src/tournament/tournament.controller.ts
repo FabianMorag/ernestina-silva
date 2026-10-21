@@ -179,6 +179,32 @@ export class TournamentController {
     }
   }
 
+  @Delete('stages/:id')
+  async deleteStage(@Param('id') id: string) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const stage = await tx.stage.findUnique({ where: { id }, select: { id: true } });
+        if (!stage) throw new NotFoundException('Stage not found');
+        const stageMatches = await tx.match.updateMany({
+          where: { stageId: id },
+          data: { stageId: null, groupId: null },
+        });
+        const groupMatches = await tx.match.updateMany({
+          where: { group: { stageId: id } },
+          data: { groupId: null },
+        });
+        await tx.stage.delete({ where: { id } });
+        return { deleted: true, detachedMatches: stageMatches.count + groupMatches.count };
+      }, { isolationLevel: 'Serializable' });
+    } catch (error) {
+      if ((error as { code?: unknown })?.code === 'P2025') throw new NotFoundException('Stage not found');
+      if ((error as { code?: unknown })?.code === 'P2003') {
+        throw new ConflictException('Stage changed concurrently; retry deletion');
+      }
+      rethrowTransactionConflict(error);
+    }
+  }
+
   @Get('matches')
   matches() {
     return this.prisma.match.findMany({

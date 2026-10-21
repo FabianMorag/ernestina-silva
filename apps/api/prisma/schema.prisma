@@ -105,8 +105,8 @@ model Match {
   homeTeamId     String
   awayTeamId     String
   championship   Championship @relation(fields: [championshipId], references: [id])
-  stage          Stage?       @relation(fields: [stageId], references: [id])
-  group          StageGroup?  @relation(fields: [groupId], references: [id])
+  stage          Stage?       @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  group          StageGroup?  @relation(fields: [groupId], references: [id], onDelete: Restrict)
   homePlayer     Player       @relation("HomePlayer", fields: [homePlayerId], references: [id])
   awayPlayer     Player       @relation("AwayPlayer", fields: [awayPlayerId], references: [id])
   homeTeam       Team         @relation("HomeTeam", fields: [homeTeamId], references: [id])

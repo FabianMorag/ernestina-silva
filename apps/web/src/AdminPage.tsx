@@ -1051,9 +1051,37 @@ export function AdminPage({ page }: { page: AdminSection }) {
                     <ul className="list" aria-label="Etapas del campeonato">
                       {selectedStages.map((stage) => (
                         <li className="list-row items-center" key={stage.id}>
-                          <span className="font-bold">
+                          <span className="list-col-grow font-bold">
                             {stageLabel(stage.kind)}
                           </span>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-square btn-sm text-error"
+                            aria-label={`Eliminar etapa ${stageLabel(stage.kind)}`}
+                            disabled={busy}
+                            onClick={() => {
+                              const warning =
+                                stage.kind === 'GROUP'
+                                  ? ' Sus grupos también se eliminarán.'
+                                  : ''
+                              if (
+                                !window.confirm(
+                                  `¿Eliminar la etapa ${stageLabel(stage.kind)}?${warning} Los partidos conservarán sus resultados, pero quedarán sin etapa ni grupo.`,
+                                )
+                              )
+                                return
+                              void submit(async () => {
+                                await deleteRequest(`/admin/stages/${stage.id}`)
+                                await Promise.all([
+                                  refreshStages(),
+                                  refreshGroups(),
+                                  refreshMatches(),
+                                ])
+                              })
+                            }}
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
                         </li>
                       ))}
                     </ul>
