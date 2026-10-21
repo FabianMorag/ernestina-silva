@@ -20,7 +20,7 @@ import {
 } from './admin-navigation.ts'
 import { signOut } from './session.ts'
 import { resetMatchFormKeepingContext } from './match-form.ts'
-import { withChampionshipParam } from './routes.ts'
+import { groupMatchesByStage } from './match-sections.ts'
 import {
   deleteRequest,
   patchRequest,
@@ -73,7 +73,7 @@ const pageIntro = {
   matches: {
     title: 'Partidos',
     description:
-      'Carga resultados solo entre jugadores inscritos en el campeonato.',
+      'Elige un campeonato para ver sus partidos y cargar resultados entre jugadores inscritos.',
   },
   'not-found': {
     title: 'Página no encontrada',
@@ -213,7 +213,7 @@ export function AdminPage({
   } = useSWR<Participant[]>(signedIn ? '/admin/participants' : null, request)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const championshipId =
     page === 'championships' && championshipView === 'detail'
       ? (routeChampionshipId ?? '')
@@ -231,6 +231,8 @@ export function AdminPage({
   const [matchRound, setMatchRound] = useState('')
   const [editStageId, setEditStageId] = useState('')
   const [editMatchRound, setEditMatchRound] = useState('')
+  const registerMatchDialogRef = useRef<HTMLDialogElement>(null)
+  const registerMatchDialogTrigger = useRef<HTMLButtonElement>(null)
   const editMatchDialogRef = useRef<HTMLDialogElement>(null)
   const editMatchDialogTrigger = useRef<HTMLElement | null>(null)
   const [matchToDelete, setMatchToDelete] = useState<Match | null>(null)
@@ -456,6 +458,7 @@ export function AdminPage({
   const visibleMatches = championshipId
     ? matches.filter((match) => match.championship.id === championshipId)
     : matches
+  const matchSections = groupMatchesByStage(visibleMatches)
   const canRecord = selectedRoster.length >= 2
 
   function createName(
@@ -489,7 +492,7 @@ export function AdminPage({
           </div>
           <div className="flex items-center gap-2">
             <Link className="btn btn-ghost btn-sm" to="/">
-              Ver campeonato
+              Ver sitio público
             </Link>
             <button
               className="btn btn-ghost btn-sm"
@@ -544,7 +547,8 @@ export function AdminPage({
           !playerDialog &&
           !teamDialog &&
           !matchToEdit &&
-          !matchToDelete && (
+          !matchToDelete &&
+          !(page === 'matches' && selectedChampionship) && (
             <div className="alert alert-error" role="alert">
               {error}
               <button
@@ -819,15 +823,10 @@ export function AdminPage({
             {championshipView === 'list' && (
               <section className="space-y-5">
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-xl font-bold">Tus campeonatos</h3>
-                    <p className="text-base-content/60 mt-1 text-sm">
-                      {championships.length}{' '}
-                      {championships.length === 1
-                        ? 'campeonato'
-                        : 'campeonatos'}
-                    </p>
-                  </div>
+                  <p className="text-base-content/60 text-sm">
+                    {championships.length}{' '}
+                    {championships.length === 1 ? 'campeonato' : 'campeonatos'}
+                  </p>
                   <Link
                     className="btn btn-primary"
                     to="/admin/campeonatos/nuevo"
@@ -911,7 +910,7 @@ export function AdminPage({
               <section className="max-w-2xl">
                 <div className="space-y-4">
                   <Link
-                    className="link link-primary inline-flex items-center gap-2 px-4 text-sm"
+                    className="link link-primary text-sm"
                     to="/admin/campeonatos"
                   >
                     ← Volver a campeonatos
@@ -998,27 +997,26 @@ export function AdminPage({
               </section>
             )}
             {championshipView === 'detail' && selectedChampionship && (
-              <section>
-                <div className="space-y-4">
+              <section className="border-base-300 bg-base-100 space-y-5 rounded-xl border p-5 sm:p-7">
+                <div className="space-y-5">
                   <Link
-                    className="link link-primary inline-flex items-center gap-2 px-4 text-sm"
+                    className="link link-primary text-sm"
                     to="/admin/campeonatos"
                   >
                     ← Volver a campeonatos
                   </Link>
                   {selectedChampionship && (
                     <>
-                      <div className="space-y-2 px-4 pt-3">
+                      <div className="space-y-2">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <h4 className="text-lg font-bold">
                             Jugadores y equipos
                           </h4>
                           <Link
-                            className="link link-primary"
+                            className="btn btn-primary btn-sm"
                             to={`/admin/partidos?campeonato=${encodeURIComponent(championshipId)}`}
                           >
-                            Cargar partidos{' '}
-                            <ArrowRight className="inline size-4" />
+                            Cargar partidos <ArrowRight className="size-4" />
                           </Link>
                         </div>
                         <p className="text-base-content/60 text-sm">
@@ -1037,7 +1035,7 @@ export function AdminPage({
                         </p>
                       </div>
                       <form
-                        className="grid gap-3 px-4 md:grid-cols-[1fr_1fr_auto]"
+                        className="grid gap-3 md:grid-cols-[1fr_1fr_auto]"
                         onSubmit={(event) => {
                           event.preventDefault()
                           const form = event.currentTarget
@@ -1052,38 +1050,46 @@ export function AdminPage({
                           }, form)
                         }}
                       >
-                        <select
-                          className="select-bordered select w-full"
-                          name="playerId"
-                          key={`player-${championshipId}-${selectedRoster.length}`}
-                          required
-                          defaultValue=""
-                        >
-                          <option value="" disabled>
-                            Jugador sin inscribir
-                          </option>
-                          {availablePlayers.map((player) => (
-                            <option key={player.id} value={player.id}>
-                              {player.name}
+                        <label className="flex min-w-0 flex-col gap-2">
+                          <span className="text-sm font-medium">Jugador</span>
+                          <select
+                            className="select-bordered select w-full"
+                            name="playerId"
+                            key={`player-${championshipId}-${selectedRoster.length}`}
+                            required
+                            defaultValue=""
+                          >
+                            <option value="" disabled>
+                              Selecciona un jugador
                             </option>
-                          ))}
-                        </select>
-                        <select
-                          className="select-bordered select w-full"
-                          name="teamId"
-                          key={`team-${championshipId}-${selectedRoster.length}`}
-                          required
-                          defaultValue=""
-                        >
-                          <option value="" disabled>
-                            Equipo para este campeonato
-                          </option>
-                          {teams.map((team) => (
-                            <option key={team.id} value={team.id}>
-                              {team.name}
+                            {availablePlayers.map((player) => (
+                              <option key={player.id} value={player.id}>
+                                {player.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="flex min-w-0 flex-col gap-2">
+                          <span className="text-sm font-medium">
+                            Equipo asignado en este campeonato
+                          </span>
+                          <select
+                            className="select-bordered select w-full"
+                            name="teamId"
+                            key={`team-${championshipId}-${selectedRoster.length}`}
+                            required
+                            defaultValue=""
+                          >
+                            <option value="" disabled>
+                              Selecciona un equipo
                             </option>
-                          ))}
-                        </select>
+                            {teams.map((team) => (
+                              <option key={team.id} value={team.id}>
+                                {team.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
                         <button
                           className="btn-outline btn"
                           disabled={
@@ -1094,7 +1100,7 @@ export function AdminPage({
                         </button>
                       </form>
                       {(!players.length || !teams.length) && (
-                        <p className="text-warning px-4 text-sm">
+                        <p className="text-warning text-sm">
                           Primero agrega jugadores y equipos en sus respectivas
                           secciones.
                         </p>
@@ -1132,13 +1138,11 @@ export function AdminPage({
               </section>
             )}
             {championshipView === 'detail' && selectedChampionship && (
-              <section className="border-base-300 border-t pt-7">
+              <section className="border-base-300 bg-base-100 space-y-5 rounded-xl border p-5 sm:p-7">
                 <div className="space-y-4">
-                  <h3 className="px-4 text-xl font-bold">
-                    Etapas de {selectedChampionship.name}
-                  </h3>
+                  <h3 className="text-xl font-bold">Etapas</h3>
                   <form
-                    className="flex flex-wrap gap-3 px-4"
+                    className="flex flex-wrap gap-3"
                     onSubmit={(event) => {
                       event.preventDefault()
                       const form = event.currentTarget
@@ -1211,8 +1215,10 @@ export function AdminPage({
                     </ul>
                   )}
                   {groupStage && (
-                    <div className="space-y-3 px-4">
-                      <h4 className="font-semibold">Grupos</h4>
+                    <div className="border-base-300 bg-base-200/40 space-y-3 rounded-lg border p-4">
+                      <h4 className="font-semibold">
+                        Grupos de la fase de grupos
+                      </h4>
                       <form
                         className="flex flex-wrap gap-3"
                         onSubmit={(event) => {
@@ -1268,15 +1274,136 @@ export function AdminPage({
           </>
         )}
 
-        {page === 'matches' && (
+        {page === 'matches' && !championshipId && (
+          <section className="space-y-5">
+            <p className="text-base-content/60 text-sm">
+              {championships.length}{' '}
+              {championships.length === 1 ? 'campeonato' : 'campeonatos'}
+            </p>
+            {loadingChampionships || loadingStages ? (
+              <p className="text-base-content/60 py-8 text-sm">
+                Cargando campeonatos…
+              </p>
+            ) : championships.length === 0 ? (
+              <div className="border-base-300 bg-base-100 rounded-xl border px-5 py-9">
+                <Trophy
+                  className="text-primary mb-3 size-8"
+                  aria-hidden="true"
+                />
+                <p className="font-semibold">Todavía no hay campeonatos.</p>
+                <Link
+                  className="link link-primary mt-3 inline-block"
+                  to="/admin/campeonatos/nuevo"
+                >
+                  Crear un campeonato
+                </Link>
+              </div>
+            ) : (
+              <ul className="space-y-3" aria-label="Campeonatos con partidos">
+                {championships.map((item) => {
+                  const matchCount = matches.filter(
+                    (match) => match.championship.id === item.id,
+                  ).length
+                  const championshipStages = stages.filter(
+                    (stage) => stage.championshipId === item.id,
+                  )
+                  return (
+                    <li
+                      key={item.id}
+                      className="border-base-300 bg-base-100 flex flex-col gap-4 rounded-xl border px-5 py-4 sm:flex-row sm:items-center"
+                    >
+                      <div className="flex min-w-0 flex-1 items-start gap-4 sm:items-center">
+                        <div className="bg-base-200 text-primary grid size-12 shrink-0 place-items-center rounded-lg">
+                          <Trophy className="size-7" aria-hidden="true" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="truncate font-bold">{item.name}</h4>
+                          <p className="text-primary mt-0.5 text-sm">
+                            {championshipStages.length
+                              ? championshipStages
+                                  .map((stage) => stageLabel(stage.kind))
+                                  .join(' · ')
+                              : 'Sin etapas'}
+                          </p>
+                          <p className="text-base-content/60 mt-1 flex items-center gap-1.5 text-xs">
+                            <Swords className="size-3.5" aria-hidden="true" />
+                            {matchCount}{' '}
+                            {matchCount === 1 ? 'partido' : 'partidos'}
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        className="btn btn-primary w-full sm:w-auto sm:min-w-36"
+                        to={`/admin/partidos?campeonato=${encodeURIComponent(item.id)}`}
+                        aria-label={`Ver partidos de ${item.name}`}
+                      >
+                        Ver partidos
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {page === 'matches' &&
+          championshipId &&
+          !selectedChampionship &&
+          !loadingChampionships && (
+            <section className="border-base-300 bg-base-100 rounded-xl border p-6">
+              <p className="font-semibold">No encontramos este campeonato.</p>
+              <Link
+                className="link link-primary mt-3 inline-block"
+                to="/admin/partidos"
+              >
+                Ver campeonatos
+              </Link>
+            </section>
+          )}
+
+        {page === 'matches' && selectedChampionship && (
           <>
-            <section>
-              <div className="space-y-5">
-                <h3 className="px-4 text-xl font-bold">Registrar un partido</h3>
+            <Link className="link link-primary text-sm" to="/admin/partidos">
+              ← Volver a campeonatos
+            </Link>
+            <dialog
+              ref={registerMatchDialogRef}
+              className="modal"
+              aria-labelledby="register-match-title"
+              onCancel={(event) => {
+                if (busy) event.preventDefault()
+              }}
+              onClose={() => setError('')}
+              onClick={(event) => {
+                if (event.target === event.currentTarget && !busy)
+                  registerMatchDialogRef.current?.close()
+              }}
+            >
+              <div className="modal-box max-w-4xl">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 id="register-match-title" className="text-xl font-bold">
+                    Registrar un partido
+                  </h3>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={busy}
+                    autoFocus
+                    onClick={() => registerMatchDialogRef.current?.close()}
+                  >
+                    Cerrar
+                  </button>
+                </div>
                 {!canRecord && (
-                  <p className="text-warning px-4 text-sm">
-                    Selecciona un campeonato con al menos dos jugadores
-                    inscritos y sus equipos asignados.
+                  <p className="text-warning mt-3 text-sm">
+                    Este campeonato necesita al menos dos jugadores inscritos y
+                    sus equipos asignados.
+                  </p>
+                )}
+                {error && (
+                  <p className="text-error mt-3 text-sm" role="alert">
+                    {error}
                   </p>
                 )}
                 <form
@@ -1317,40 +1444,13 @@ export function AdminPage({
                       })
                       await refreshMatches()
                       resetMatchFormKeepingContext(form)
+                      registerMatchDialogRef.current?.close()
                     })
                   }}
                 >
                   <div
                     className={`grid gap-4 md:grid-cols-2 ${matchStage?.kind === 'GROUP' ? 'lg:grid-cols-3' : ''}`}
                   >
-                    <label className="flex min-w-0 flex-col gap-2">
-                      <span className="text-sm font-medium">Campeonato</span>
-                      <select
-                        className="select-bordered select w-full"
-                        name="championshipId"
-                        required
-                        value={championshipId}
-                        onChange={(event) => {
-                          setMatchStageId('')
-                          setMatchRound('')
-                          setSearchParams(
-                            withChampionshipParam(
-                              searchParams,
-                              event.target.value,
-                            ),
-                          )
-                        }}
-                      >
-                        <option value="" disabled>
-                          Selecciona un campeonato
-                        </option>
-                        {championships.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {item.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
                     <label className="flex min-w-0 flex-col gap-2">
                       <span className="text-sm font-medium">
                         Etapa (opcional)
@@ -1512,67 +1612,95 @@ export function AdminPage({
                   </div>
                 </form>
               </div>
-            </section>
+            </dialog>
             <section className="border-base-300 space-y-4 border-t pt-7">
-              <div className="flex items-center justify-between gap-3 px-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4">
                 <h3 className="text-xl font-bold">Partidos registrados</h3>
-                <span className="text-base-content/60 text-sm">
-                  {visibleMatches.length}{' '}
-                  {visibleMatches.length === 1 ? 'partido' : 'partidos'}
-                </span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-base-content/60 text-sm">
+                    {visibleMatches.length}{' '}
+                    {visibleMatches.length === 1 ? 'partido' : 'partidos'}
+                  </span>
+                  <button
+                    ref={registerMatchDialogTrigger}
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => registerMatchDialogRef.current?.showModal()}
+                  >
+                    <Plus className="size-4" /> Registrar partido
+                  </button>
+                </div>
               </div>
               {visibleMatches.length === 0 ? (
                 <p className="text-base-content/60 px-4 py-6 text-sm">
                   Todavía no hay partidos registrados.
                 </p>
               ) : (
-                <ul className="list" aria-label="Partidos registrados">
-                  {visibleMatches.map((match) => (
-                    <li className="list-row items-center" key={match.id}>
-                      <div className="list-col-grow min-w-0">
-                        <p className="font-semibold">
-                          {match.homePlayer.name}{' '}
-                          <span className="text-base-content/40">contra</span>{' '}
-                          {match.awayPlayer.name}
-                        </p>
-                        <p className="text-base-content/60 text-sm">
-                          {match.homeTeam.name} · {match.awayTeam.name}
-                        </p>
-                        <p className="text-base-content/50 mt-1 text-xs">
-                          {match.championship.name}
-                          {match.stage
-                            ? ` / ${stageLabel(match.stage.kind)}`
-                            : ''}
-                          {match.group ? ` / Grupo ${match.group.name}` : ''}
-                          {match.knockoutRound && match.knockoutSlot
-                            ? ` / ${knockoutRoundLabel(match.knockoutRound)} · Cruce ${match.knockoutSlot}`
-                            : ''}
-                        </p>
-                      </div>
-                      <span className="text-xl font-black tabular-nums">
-                        {match.homeScore} — {match.awayScore}
-                      </span>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-square btn-sm"
-                        aria-label={`Editar partido de ${match.homePlayer.name} contra ${match.awayPlayer.name}`}
-                        disabled={busy}
-                        onClick={() => changeEditMatchDialog(match)}
+                <div className="space-y-6">
+                  {matchSections.map((section, index) => (
+                    <section
+                      key={section.key}
+                      aria-labelledby={`match-section-title-${index}`}
+                    >
+                      <h4
+                        id={`match-section-title-${index}`}
+                        className="text-base-content/70 mb-3 text-sm font-semibold"
                       >
-                        <Pencil className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-square btn-sm text-error"
-                        aria-label={`Eliminar partido de ${match.homePlayer.name} contra ${match.awayPlayer.name}`}
-                        disabled={busy}
-                        onClick={() => changeMatchDialog(match)}
+                        {section.title}
+                      </h4>
+                      <ul
+                        className="space-y-3"
+                        aria-label={`Partidos: ${section.title}`}
                       >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </li>
+                        {section.matches.map((match) => (
+                          <li
+                            key={match.id}
+                            className="border-base-300 bg-base-100 flex flex-col gap-4 rounded-xl border px-5 py-4 sm:flex-row sm:items-center"
+                          >
+                            <div className="flex min-w-0 flex-1 items-start gap-4 sm:items-center">
+                              <div className="bg-base-200 text-primary grid size-12 shrink-0 place-items-center rounded-lg">
+                                <Swords className="size-7" aria-hidden="true" />
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="truncate font-bold">
+                                  {match.homePlayer.name}{' '}
+                                  <span className="text-base-content/40 font-normal">
+                                    contra
+                                  </span>{' '}
+                                  {match.awayPlayer.name}
+                                </h4>
+                                {match.knockoutSlot && (
+                                  <p className="text-base-content/50 mt-0.5 text-xs">
+                                    Cruce {match.knockoutSlot}
+                                  </p>
+                                )}
+                                <p className="text-base-content/60 mt-1 text-xs">
+                                  {match.homeTeam.name} · {match.awayTeam.name}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 sm:justify-end">
+                              <span className="text-xl font-black tabular-nums">
+                                {match.homeScore} — {match.awayScore}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost btn-square btn-sm"
+                                  aria-label={`Editar partido de ${match.homePlayer.name} contra ${match.awayPlayer.name}`}
+                                  disabled={busy}
+                                  onClick={() => changeEditMatchDialog(match)}
+                                >
+                                  <Pencil className="size-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
                   ))}
-                </ul>
+                </div>
               )}
               <dialog
                 ref={editMatchDialogRef}
@@ -1779,18 +1907,29 @@ export function AdminPage({
                           {error}
                         </p>
                       )}
-                      <div className="modal-action">
+                      <div className="modal-action flex-wrap justify-between gap-3">
                         <button
                           type="button"
-                          className="btn btn-ghost"
+                          className="btn btn-error btn-outline"
+                          aria-label={`Eliminar partido de ${matchToEdit.homePlayer.name} contra ${matchToEdit.awayPlayer.name}`}
                           disabled={busy}
-                          onClick={() => changeEditMatchDialog(null)}
+                          onClick={() => changeMatchDialog(matchToEdit)}
                         >
-                          Cancelar
+                          <Trash2 className="size-4" /> Eliminar partido
                         </button>
-                        <button className="btn btn-primary" disabled={busy}>
-                          Guardar cambios
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            disabled={busy}
+                            onClick={() => changeEditMatchDialog(null)}
+                          >
+                            Cancelar
+                          </button>
+                          <button className="btn btn-primary" disabled={busy}>
+                            Guardar cambios
+                          </button>
+                        </div>
                       </div>
                     </form>
                   </div>
@@ -1850,7 +1989,10 @@ export function AdminPage({
                           void submit(async () => {
                             await deleteRequest(`/admin/matches/${matchId}`)
                             await refreshMatches()
+                            matchDialogTrigger.current =
+                              registerMatchDialogTrigger.current
                             changeMatchDialog(null)
+                            changeEditMatchDialog(null)
                           })
                         }}
                       >
