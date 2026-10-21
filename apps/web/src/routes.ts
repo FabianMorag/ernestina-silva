@@ -4,6 +4,7 @@ export type RouteId =
   | 'home'
   | 'publicMatches'
   | 'publicChampionships'
+  | 'publicChampionshipDetail'
   | 'adminChampionships'
   | 'adminChampionshipsNew'
   | 'adminChampionshipDetail'
@@ -15,7 +16,13 @@ export type RouteId =
 
 export type Area = 'public' | 'admin'
 export type RoutePage =
-  'home' | 'matches' | 'championships' | 'players' | 'teams' | 'not-found'
+  | 'home'
+  | 'matches'
+  | 'championships'
+  | 'championship'
+  | 'players'
+  | 'teams'
+  | 'not-found'
 export type ResolvedRoute = { id: RouteId; area: Area; page: RoutePage }
 
 type RouteEntry = ResolvedRoute & { path: string }
@@ -35,6 +42,12 @@ export const routeTable: RouteEntry[] = [
     path: '/campeonatos',
     area: 'public',
     page: 'championships',
+  },
+  {
+    id: 'publicChampionshipDetail',
+    path: '/campeonatos/:championshipId',
+    area: 'public',
+    page: 'championship',
   },
   {
     id: 'adminChampionships',

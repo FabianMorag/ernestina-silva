@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
+  championshipDetailPath,
   championshipSummaries,
   matchesForChampionship,
 } from './championships.ts'
@@ -27,4 +28,12 @@ test('a championship action shows only its matches', () => {
   assert.deepEqual(matchesForChampionship(matches, 'cup'), [matches[0]])
   assert.deepEqual(matchesForChampionship(matches, 'missing'), [])
   assert.deepEqual(matchesForChampionship(matches, null), matches)
+})
+
+test('detail links encode championship IDs as one path segment', () => {
+  assert.equal(
+    championshipDetailPath('copa 2026/fase'),
+    '/campeonatos/copa%202026%2Ffase',
+  )
+  assert.equal(championshipDetailPath('cup'), '/campeonatos/cup')
 })

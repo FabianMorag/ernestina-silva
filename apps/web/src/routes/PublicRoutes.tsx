@@ -1,4 +1,5 @@
 import { PublicPage } from '../PublicPage.tsx'
+import { PublicChampionshipDetail } from '../public-championship/ChampionshipDetail.tsx'
 
 export function HomeRoute() {
   return <PublicPage page="home" />
@@ -10,6 +11,10 @@ export function PublicMatchesRoute() {
 
 export function PublicChampionshipsRoute() {
   return <PublicPage page="championships" />
+}
+
+export function PublicChampionshipDetailRoute() {
+  return <PublicChampionshipDetail />
 }
 
 export function PublicNotFoundRoute() {

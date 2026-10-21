@@ -9,6 +9,7 @@ import {
 import { Link, useSearchParams } from 'react-router'
 import useSWR from 'swr'
 import {
+  championshipDetailPath,
   championshipSummaries,
   matchesForChampionship,
   type ChampionshipSummary,
@@ -65,13 +66,22 @@ function ChampionshipList({
               )}
             </div>
           </div>
-          <Link
-            className="public-action"
-            to={`/partidos?campeonato=${encodeURIComponent(championship.id)}`}
-            aria-label={`Ver partidos de ${championship.name}`}
-          >
-            Ver partidos <ArrowRight aria-hidden="true" />
-          </Link>
+          <div className="public-row-actions">
+            <Link
+              className="public-action"
+              to={championshipDetailPath(championship.id)}
+              aria-label={`Ver detalle de ${championship.name}`}
+            >
+              Ver detalle <ArrowRight aria-hidden="true" />
+            </Link>
+            <Link
+              className="public-action public-action-secondary"
+              to={`/partidos?campeonato=${encodeURIComponent(championship.id)}`}
+              aria-label={`Ver partidos de ${championship.name}`}
+            >
+              Ver partidos
+            </Link>
+          </div>
         </article>
       ))}
     </div>

@@ -11,6 +11,7 @@ import {
 } from './routes/AdminRoutes.tsx'
 import {
   HomeRoute,
+  PublicChampionshipDetailRoute,
   PublicChampionshipsRoute,
   PublicMatchesRoute,
   PublicNotFoundRoute,
@@ -21,6 +22,7 @@ const routeComponents: Record<RouteId, ComponentType> = {
   home: HomeRoute,
   publicMatches: PublicMatchesRoute,
   publicChampionships: PublicChampionshipsRoute,
+  publicChampionshipDetail: PublicChampionshipDetailRoute,
   adminChampionships: AdminChampionshipsRoute,
   adminChampionshipsNew: AdminChampionshipsNewRoute,
   adminChampionshipDetail: AdminChampionshipDetailRoute,

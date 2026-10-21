@@ -97,3 +97,21 @@ test('championship selection updates only its search parameter', () => {
     'view=compact',
   )
 })
+
+test('public championship detail has its own direct URL', () => {
+  assert.deepEqual(resolveRoute('/campeonatos/copa-2026'), {
+    id: 'publicChampionshipDetail',
+    area: 'public',
+    page: 'championship',
+  })
+  assert.deepEqual(resolveRoute('/campeonatos/copa%202026/'), {
+    id: 'publicChampionshipDetail',
+    area: 'public',
+    page: 'championship',
+  })
+  assert.deepEqual(resolveRoute('/campeonatos'), {
+    id: 'publicChampionships',
+    area: 'public',
+    page: 'championships',
+  })
+})

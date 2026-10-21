@@ -24,3 +24,7 @@ export function matchesForChampionship(
     ? matches.filter((match) => match.championship.id === championshipId)
     : matches
 }
+
+export function championshipDetailPath(championshipId: string): string {
+  return `/campeonatos/${encodeURIComponent(championshipId)}`
+}
