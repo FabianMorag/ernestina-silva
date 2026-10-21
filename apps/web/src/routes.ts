@@ -5,6 +5,8 @@ export type RouteId =
   | 'publicMatches'
   | 'publicChampionships'
   | 'adminChampionships'
+  | 'adminChampionshipsNew'
+  | 'adminChampionshipDetail'
   | 'adminPlayers'
   | 'adminTeams'
   | 'adminMatches'
@@ -43,6 +45,18 @@ export const routeTable: RouteEntry[] = [
   {
     id: 'adminChampionships',
     path: '/admin/campeonatos',
+    area: 'admin',
+    page: 'championships',
+  },
+  {
+    id: 'adminChampionshipsNew',
+    path: '/admin/campeonatos/nuevo',
+    area: 'admin',
+    page: 'championships',
+  },
+  {
+    id: 'adminChampionshipDetail',
+    path: '/admin/campeonatos/:championshipId',
     area: 'admin',
     page: 'championships',
   },

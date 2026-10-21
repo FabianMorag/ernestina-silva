@@ -2,6 +2,8 @@ import type { ComponentType } from 'react'
 import { Route, Routes } from 'react-router'
 import {
   AdminChampionshipsRoute,
+  AdminChampionshipsNewRoute,
+  AdminChampionshipDetailRoute,
   AdminMatchesRoute,
   AdminNotFoundRoute,
   AdminPlayersRoute,
@@ -20,6 +22,8 @@ const routeComponents: Record<RouteId, ComponentType> = {
   publicMatches: PublicMatchesRoute,
   publicChampionships: PublicChampionshipsRoute,
   adminChampionships: AdminChampionshipsRoute,
+  adminChampionshipsNew: AdminChampionshipsNewRoute,
+  adminChampionshipDetail: AdminChampionshipDetailRoute,
   adminPlayers: AdminPlayersRoute,
   adminTeams: AdminTeamsRoute,
   adminMatches: AdminMatchesRoute,

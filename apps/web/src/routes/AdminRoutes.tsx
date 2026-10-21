@@ -1,7 +1,25 @@
 import { AdminPage } from '../AdminPage.tsx'
+import { Navigate, useSearchParams } from 'react-router'
 
 export function AdminChampionshipsRoute() {
-  return <AdminPage page="championships" />
+  const [searchParams] = useSearchParams()
+  const selectedId = searchParams.get('campeonato')
+  if (selectedId)
+    return (
+      <Navigate
+        to={`/admin/campeonatos/${encodeURIComponent(selectedId)}`}
+        replace
+      />
+    )
+  return <AdminPage page="championships" championshipView="list" />
+}
+
+export function AdminChampionshipsNewRoute() {
+  return <AdminPage page="championships" championshipView="create" />
+}
+
+export function AdminChampionshipDetailRoute() {
+  return <AdminPage page="championships" championshipView="detail" />
 }
 
 export function AdminPlayersRoute() {

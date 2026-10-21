@@ -3,6 +3,8 @@ import { test } from 'node:test'
 import {
   deleteRequest,
   groupsForStage,
+  knockoutRoundLabel,
+  knockoutSlots,
   patchRequest,
   request,
 } from './tournament-api.ts'
@@ -18,6 +20,13 @@ test('group choices include only groups from the selected stage', () => {
     ).map((group) => group.name),
     ['A'],
   )
+})
+
+test('knockout rounds expose clear labels and bounded pairing slots', () => {
+  assert.equal(knockoutRoundLabel(8), 'Cuartos de final')
+  assert.equal(knockoutRoundLabel(2), 'Final')
+  assert.deepEqual(knockoutSlots(4), [1, 2])
+  assert.deepEqual(knockoutSlots(3), [])
 })
 
 test('DELETE removes the selected match with the admin session', async () => {

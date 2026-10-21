@@ -25,6 +25,27 @@ export type Match = {
   championship: Item
   stage: Stage | null
   group: StageGroup | null
+  knockoutRound: number | null
+  knockoutSlot: number | null
+}
+
+export const KNOCKOUT_ROUNDS = [64, 32, 16, 8, 4, 2] as const
+
+export function knockoutRoundLabel(round: number): string {
+  const labels: Record<number, string> = {
+    64: 'Ronda de 64',
+    32: 'Ronda de 32',
+    16: 'Octavos de final',
+    8: 'Cuartos de final',
+    4: 'Semifinales',
+    2: 'Final',
+  }
+  return labels[round] ?? `Ronda de ${round}`
+}
+
+export function knockoutSlots(round: number): number[] {
+  if (!KNOCKOUT_ROUNDS.some((value) => value === round)) return []
+  return Array.from({ length: round / 2 }, (_, index) => index + 1)
 }
 
 export function groupsForStage(

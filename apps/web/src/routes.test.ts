@@ -41,6 +41,16 @@ test('admin sections keep their direct URLs', () => {
     area: 'admin',
     page: 'championships',
   })
+  assert.deepEqual(resolveRoute('/admin/campeonatos/nuevo'), {
+    id: 'adminChampionshipsNew',
+    area: 'admin',
+    page: 'championships',
+  })
+  assert.deepEqual(resolveRoute('/admin/campeonatos/copa-2026'), {
+    id: 'adminChampionshipDetail',
+    area: 'admin',
+    page: 'championships',
+  })
   assert.deepEqual(resolveRoute('/admin/jugadores/'), {
     id: 'adminPlayers',
     area: 'admin',
