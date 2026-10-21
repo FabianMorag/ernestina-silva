@@ -19,6 +19,22 @@ export type KnockoutBracket = {
   champion: null
 }
 
+export function connectsToNextRound(
+  round: BracketRound,
+  nextRound: BracketRound | undefined,
+): boolean {
+  return nextRound?.round === round.round / 2
+}
+
+export function bracketRoundClass(
+  round: BracketRound,
+  nextRound: BracketRound | undefined,
+): string {
+  return connectsToNextRound(round, nextRound)
+    ? 'public-bracket-round is-connected'
+    : 'public-bracket-round'
+}
+
 const isKnockout = (match: Match) => match.stage?.kind === 'KNOCKOUT'
 
 function hasValidPlacement(match: Match): boolean {

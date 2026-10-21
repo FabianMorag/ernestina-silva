@@ -413,7 +413,7 @@
   }
 }
 
-/* Public championship detail: standings, bracket, history */
+/* Public championship detail: standings and bracket */
 .public-row-actions {
   display: flex;
   flex-wrap: wrap;
@@ -461,20 +461,23 @@
 }
 .public-bracket-wrap {
   overflow-x: auto;
+  padding: 0.25rem 0.25rem 1rem;
   -webkit-overflow-scrolling: touch;
 }
 .public-bracket {
-  display: flex;
-  gap: 1.5rem;
-  align-items: stretch;
+  --bracket-gap: 48px;
+  --bracket-half-gap: 24px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 230px;
+  column-gap: var(--bracket-gap);
   min-width: max-content;
+  padding-top: 2.5rem;
 }
 .public-bracket-round {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  gap: 0.75rem;
-  min-width: 200px;
+  position: relative;
+  display: grid;
+  grid-template-rows: repeat(var(--bracket-base-slots), 112px);
   animation: public-bracket-in 320ms ease-out both;
 }
 .public-bracket-round:nth-child(2) {
@@ -484,25 +487,99 @@
   animation-delay: 160ms;
 }
 .public-bracket-round h3 {
+  position: absolute;
+  top: -2rem;
+  left: 0;
+  margin: 0;
   color: var(--public-lime);
   font-size: 0.8rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 .public-bracket-slot {
+  position: relative;
+  z-index: 1;
+  grid-column: 1;
   display: grid;
-  gap: 0.25rem;
-  padding: 0.6rem 0.75rem;
+  align-self: center;
+  overflow: visible;
   border: 1px solid #293a3a;
-  border-radius: 10px;
-  background: #111820;
+  border-radius: 8px;
+  background: linear-gradient(115deg, #141b25, #1e2930);
+  box-shadow: 0 8px 22px #0004;
 }
-.public-bracket-slot span {
+.public-bracket-player {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  min-height: 42px;
+  padding-left: 0.65rem;
+}
+.public-bracket-player + .public-bracket-player {
+  border-top: 1px solid #ffffff12;
+}
+.public-bracket-player span {
+  display: grid;
+  min-width: 0;
+}
+.public-bracket-player strong {
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.public-bracket-player small {
+  overflow: hidden;
+  color: #9aacaa;
+  font-size: 0.67rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.public-bracket-player b {
+  display: grid;
+  align-self: stretch;
+  place-items: center;
+  min-width: 2rem;
+  background: #ffffff0d;
+  color: var(--public-lime);
+  font-variant-numeric: tabular-nums;
+}
+.public-bracket-round.is-connected .public-bracket-slot::after {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: var(--bracket-half-gap);
+  border-top: 1px solid var(--public-lime);
+  content: '';
+  animation: public-bracket-draw-x 320ms ease-out 240ms both;
+  transform-origin: left center;
+}
+.public-bracket-fork {
+  position: relative;
+  grid-column: 1;
+  left: calc(100% + var(--bracket-half-gap));
+  width: 0;
+  height: 50%;
+  align-self: center;
+  border-left: 1px solid var(--public-lime);
+  pointer-events: none;
+  animation: public-bracket-draw-y 320ms ease-out 240ms both;
+  transform-origin: top center;
+}
+.public-bracket-fork::after {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: var(--bracket-half-gap);
+  border-top: 1px solid var(--public-lime);
+  content: '';
+  animation: public-bracket-draw-x 320ms ease-out 240ms both;
+  transform-origin: left center;
 }
 .public-bracket-empty {
+  padding: 1rem 0.7rem;
   color: #8aa39a;
   font-style: italic;
 }
@@ -511,25 +588,6 @@
   padding: 1rem;
   border: 1px dashed #4c6b63;
   border-radius: 12px;
-}
-.public-history {
-  display: grid;
-  gap: 0.5rem;
-  padding: 0;
-  list-style: none;
-}
-.public-history-row {
-  display: grid;
-  gap: 0.25rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid #293a3a;
-  border-radius: 12px;
-  background: #111820;
-}
-.public-history-context,
-.public-history-teams {
-  color: #8aa39a;
-  font-size: 0.85rem;
 }
 .sr-only {
   position: absolute;
@@ -559,8 +617,27 @@
     transform: none;
   }
 }
+@keyframes public-bracket-draw-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes public-bracket-draw-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .public-bracket-round {
+  .public-bracket-round,
+  .public-bracket-round.is-connected .public-bracket-slot::after,
+  .public-bracket-fork,
+  .public-bracket-fork::after {
     animation: none;
   }
 }
@@ -568,7 +645,9 @@
   .public-row-actions {
     justify-content: flex-start;
   }
-  .public-bracket-round {
-    min-width: 170px;
+  .public-bracket {
+    --bracket-gap: 36px;
+    --bracket-half-gap: 18px;
+    grid-auto-columns: 185px;
   }
 }

@@ -1,17 +1,21 @@
-import { ArrowLeft, Swords, Trophy } from 'lucide-react'
+import type { CSSProperties } from 'react'
+import { ArrowLeft, Trophy } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import useSWR from 'swr'
 import { matchesForChampionship } from '../championships.ts'
 import {
   request,
-  stageLabel,
   type Item,
   type Match,
   type Participant,
   type Stage,
   type StageGroup,
 } from '../tournament-api.ts'
-import { buildKnockoutBracket } from './bracket.ts'
+import {
+  bracketRoundClass,
+  buildKnockoutBracket,
+  connectsToNextRound,
+} from './bracket.ts'
 import {
   calculatePlayerStandings,
   groupStageMatches,
@@ -118,26 +122,48 @@ function KnockoutSection({ matches }: { matches: Match[] }) {
           className="public-bracket"
           role="list"
           aria-label="Llaves del torneo"
+          style={
+            {
+              '--bracket-base-slots': bracket.rounds[0].slots.length,
+            } as CSSProperties
+          }
         >
-          {bracket.rounds.map((round) => (
+          {bracket.rounds.map((round, roundIndex) => (
             <div
-              className="public-bracket-round"
+              className={bracketRoundClass(
+                round,
+                bracket.rounds[roundIndex + 1],
+              )}
               role="listitem"
               key={round.round}
             >
               <h3>{round.label}</h3>
-              {round.slots.map((slot) => (
-                <div className="public-bracket-slot" key={slot.slot}>
+              {round.slots.map((slot, slotIndex) => (
+                <div
+                  className="public-bracket-slot"
+                  key={slot.slot}
+                  style={
+                    {
+                      gridRow: `${slotIndex * (bracket.rounds[0].slots.length / round.slots.length) + 1} / span ${bracket.rounds[0].slots.length / round.slots.length}`,
+                    } as CSSProperties
+                  }
+                >
                   {slot.match ? (
                     <>
-                      <span>
-                        {slot.match.homePlayer.name}{' '}
-                        <strong>{slot.match.homeScore}</strong>
-                      </span>
-                      <span>
-                        {slot.match.awayPlayer.name}{' '}
-                        <strong>{slot.match.awayScore}</strong>
-                      </span>
+                      <div className="public-bracket-player">
+                        <span>
+                          <strong>{slot.match.homePlayer.name}</strong>
+                          <small>{slot.match.homeTeam.name}</small>
+                        </span>
+                        <b>{slot.match.homeScore}</b>
+                      </div>
+                      <div className="public-bracket-player">
+                        <span>
+                          <strong>{slot.match.awayPlayer.name}</strong>
+                          <small>{slot.match.awayTeam.name}</small>
+                        </span>
+                        <b>{slot.match.awayScore}</b>
+                      </div>
                     </>
                   ) : (
                     <span className="public-bracket-empty">
@@ -146,6 +172,22 @@ function KnockoutSection({ matches }: { matches: Match[] }) {
                   )}
                 </div>
               ))}
+              {connectsToNextRound(round, bracket.rounds[roundIndex + 1]) &&
+                Array.from(
+                  { length: round.slots.length / 2 },
+                  (_, pairIndex) => (
+                    <span
+                      className="public-bracket-fork"
+                      key={`fork-${pairIndex}`}
+                      aria-hidden="true"
+                      style={
+                        {
+                          gridRow: `${pairIndex * 2 * (bracket.rounds[0].slots.length / round.slots.length) + 1} / span ${2 * (bracket.rounds[0].slots.length / round.slots.length)}`,
+                        } as CSSProperties
+                      }
+                    />
+                  ),
+                )}
             </div>
           ))}
         </div>
@@ -165,37 +207,6 @@ function KnockoutSection({ matches }: { matches: Match[] }) {
         </div>
       )}
     </div>
-  )
-}
-
-function History({ matches }: { matches: Match[] }) {
-  if (!matches.length)
-    return (
-      <p className="public-message" role="status">
-        Todavía no hay partidos registrados en este campeonato.
-      </p>
-    )
-  return (
-    <ol className="public-history">
-      {matches.map((match) => (
-        <li key={match.id} className="public-history-row">
-          <span className="public-history-context">
-            {match.stage ? stageLabel(match.stage.kind) : 'Sin fase'}
-            {match.group ? ` · Grupo ${match.group.name}` : ''}
-          </span>
-          <span>
-            {match.homePlayer.name}{' '}
-            <strong>
-              {match.homeScore} — {match.awayScore}
-            </strong>{' '}
-            {match.awayPlayer.name}
-          </span>
-          <span className="public-history-teams">
-            {match.homeTeam.name} vs {match.awayTeam.name}
-          </span>
-        </li>
-      ))}
-    </ol>
   )
 }
 
@@ -347,13 +358,6 @@ export function PublicChampionshipDetail() {
             <section className="public-board" aria-labelledby="knockout-title">
               <h2 id="knockout-title">Llaves</h2>
               <KnockoutSection matches={knockoutMatches} />
-            </section>
-
-            <section className="public-board" aria-labelledby="history-title">
-              <h2 id="history-title">
-                <Swords aria-hidden="true" /> Historial de partidos
-              </h2>
-              <History matches={championshipMatches} />
             </section>
           </>
         )}

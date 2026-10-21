@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { buildKnockoutBracket } from './public-championship/bracket.ts'
+import {
+  bracketRoundClass,
+  buildKnockoutBracket,
+  connectsToNextRound,
+} from './public-championship/bracket.ts'
 import type { Match } from './tournament-api.ts'
 
 const team: { id: string; name: string } = { id: 't', name: 'Equipo' }
@@ -116,4 +120,37 @@ test('returns an empty bracket when there are no knockout matches', () => {
     unplaced: [],
     champion: null,
   })
+})
+
+test('connectors only link consecutive recorded rounds', () => {
+  const adjacent = buildKnockoutBracket([
+    knockout('semi', 4, 1),
+    knockout('final', 2, 1),
+  ])
+  assert.equal(
+    connectsToNextRound(adjacent.rounds[0], adjacent.rounds[1]),
+    true,
+  )
+
+  const skipped = buildKnockoutBracket([
+    knockout('quarter', 8, 1),
+    knockout('final', 2, 1),
+  ])
+  assert.equal(connectsToNextRound(skipped.rounds[0], skipped.rounds[1]), false)
+  assert.equal(connectsToNextRound(skipped.rounds[1], undefined), false)
+})
+
+test('a connected round carries the is-connected class after a space', () => {
+  const bracket = buildKnockoutBracket([
+    knockout('semi', 4, 1),
+    knockout('final', 2, 1),
+  ])
+  assert.equal(
+    bracketRoundClass(bracket.rounds[0], bracket.rounds[1]),
+    'public-bracket-round is-connected',
+  )
+  assert.equal(
+    bracketRoundClass(bracket.rounds[1], undefined),
+    'public-bracket-round',
+  )
 })
