@@ -147,26 +147,12 @@
     0 22px 36px #0000004d,
     0 5px 12px #00000038;
 }
-.public-board-header {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-.public-board-overline {
-  color: var(--public-lime);
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.17em;
-}
 .public-board h2 {
   margin: 0.35rem 0 0;
   font-size: clamp(1.25rem, 2vw, 1.7rem);
   font-weight: 800;
 }
 .public-count {
-  flex: none;
   padding: 0.52rem 0.75rem;
   border: 1px solid #405638;
   border-radius: 8px;
@@ -174,6 +160,13 @@
   font-size: 0.66rem;
   font-weight: 900;
   letter-spacing: 0.1em;
+}
+.public-listing {
+  display: grid;
+  gap: 1rem;
+}
+.public-listing > .public-count {
+  justify-self: end;
 }
 .championship-list,
 .public-match-list {
@@ -397,10 +390,6 @@
   .public-container {
     width: min(100% - 1.5rem, 1200px);
   }
-  .public-board-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
   .public-match-row {
     padding: 1rem;
   }
@@ -423,11 +412,11 @@
 .public-action-secondary {
   opacity: 0.8;
 }
-.public-detail-section + .public-detail-section {
+.public-detail-section + .public-detail-section,
+.public-board + .public-board {
   margin-top: 1.5rem;
 }
-.public-detail-section h3,
-.public-board h2 svg {
+.public-detail-section h3 {
   vertical-align: middle;
 }
 .public-board h2 {

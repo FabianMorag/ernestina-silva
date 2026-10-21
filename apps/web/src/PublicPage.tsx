@@ -15,6 +15,11 @@ import {
   type ChampionshipSummary,
 } from './championships.ts'
 import {
+  publicCountLabel,
+  publicListingLabel,
+  type PublicListing,
+} from './public-listing.ts'
+import {
   request,
   stageLabel,
   type Item,
@@ -149,6 +154,12 @@ export function PublicPage({ page }: { page: PublicRoute }) {
     : undefined
   const visibleMatches = matchesForChampionship(matches, selectedId)
   const listingChampionships = page === 'home' || page === 'championships'
+  const listing: PublicListing = listingChampionships
+    ? 'championships'
+    : 'matches'
+  const visibleCount = listingChampionships
+    ? championships.length
+    : visibleMatches.length
 
   return (
     <main className="public-shell">
@@ -219,31 +230,12 @@ export function PublicPage({ page }: { page: PublicRoute }) {
           </div>
 
           <section
-            className="public-board"
-            aria-labelledby="public-board-title"
+            className="public-listing"
+            aria-label={publicListingLabel(listing)}
           >
-            <div className="public-board-header">
-              <div>
-                <span className="public-board-overline">ERNESTINA SILVA</span>
-                <h2 id="public-board-title">
-                  {listingChampionships
-                    ? 'Lista de campeonatos'
-                    : 'Partidos registrados'}
-                </h2>
-              </div>
-              <span className="public-count">
-                {listingChampionships
-                  ? championships.length
-                  : visibleMatches.length}{' '}
-                {listingChampionships
-                  ? championships.length === 1
-                    ? 'CAMPEONATO'
-                    : 'CAMPEONATOS'
-                  : visibleMatches.length === 1
-                    ? 'PARTIDO'
-                    : 'PARTIDOS'}
-              </span>
-            </div>
+            <span className="public-count">
+              {publicCountLabel(listing, visibleCount)}
+            </span>
             {error && (
               <div className="public-message" role="alert">
                 No pudimos cargar los datos. Actualiza la página para intentarlo
