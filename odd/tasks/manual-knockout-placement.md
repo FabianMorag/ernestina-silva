@@ -9,7 +9,7 @@ Branch: `feat/tournament-admin`. Delivery: `exception-ok` (the user previously w
 
 ## Tasks
 - T1 (S1, S3): inline; complete; nullable migration, validation and API tests; commit `d333414`. Risk: item 1, persisted format change; independently verified.
-- T2 (S2, S3): inline; verified; admin placement controls and focused checks; commit pending. Risk: none.
+- T2 (S2, S3): inline; complete; admin placement controls and focused checks; commit `7be6f14`. Risk: none.
 - T3 (S4): inline; complete; migration/data preservation and web checks verified without an API production build. Risk: none.
 
 ## Log
