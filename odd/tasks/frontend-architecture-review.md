@@ -1,0 +1,22 @@
+# Frontend architecture review and cleanup
+Objective: verify stylesheet and route concerns, then improve feature boundaries without changing public or admin behavior.
+Branch: `feat/tournament-admin`. Delivery: `single-pr` local work units; no push or PR. Runner: pnpm.
+
+## Specs
+- S1: User request: "Veo archivos css pero no se si todo el css se está utilizando, además teniendo tailwindcss". Audit authored CSS usage; retain confirmed-live rules and do not infer that Tailwind makes custom CSS redundant. Check: stylesheet imports, selector references including dynamic classes, and web build.
+- S2: User request: "Veo que las rutas están acumuladas en unos pocos archivos diferenciadas por un string (page=\"x\"), esto es una buena practica?". Assess actual React Router flow and reduce page-component coupling where evidence warrants it; preserve current URLs, redirects, and route semantics. Check: route tests and public/admin smoke checks.
+- S3: User request: "hay que componetizar lo que se pueda para no llenar el source el proyecto de archivos desordenados, ordena en directorios con sentido". Extract cohesive public and admin features into purpose-named directories, without splitting one behavior into many trivial files. Check: existing behavior tests, focused tests where feasible, lint, format, build.
+- S4: User request: "recuerda revisar todo considearndo buenas practicas, principios solid, buena arquitectura, etc". Report evidence-backed architecture findings and remaining risks; do not add speculative layers or change backend behavior without a demonstrated problem. Check: source map and final review notes.
+
+## Tasks
+- T1 (S1, S2, S4): done inline — mapped styles, routes, feature boundaries with CodeGraph and source evidence; no confirmed dead CSS selector; typed React Router table retained. Commit: N/A (read-only assessment).
+- T2 (S2, S3): done delegated — extracted public home/match presentation into feature directories without changing URLs; retained the already-pending home heading cleanup. Commit: pending.
+- T3 (S2, S3): pending delegated — extract cohesive admin player/team view boundaries from the oversized AdminPage without changing forms or auth. Commit: pending.
+- T4 (S1-S4): pending inline — verify CSS usage conclusions, test the seams, record remaining architecture findings and checks. Commit: pending.
+
+## Log
+- L1 (2026-10-22): Original user request verbatim:
+  > Ahora me gustaría revisar el código: -Veo archivos css pero no se si todo el css se está utilizando, además teniendo tailwindcss -Veo que las rutas están acumuladas en unos pocos archivos diferenciadas por un string (page="x"), esto es una buena practica? -hay que componetizar lo que se pueda para no llenar el source el proyecto de archivos desordenados, ordena en directorios con sentido -recuerda revisar todo considearndo buenas practicas, principios solid, buena arquitectura, etc
+- L2: Baseline evidence: Tailwind v4 and DaisyUI are imported by `apps/web/src/index.css`; `apps/web/src/public.css` is imported by `PublicPage.tsx` and has no confirmed dead class selector in a static scan. `routes.ts` is a typed React Router route table, while `AdminPage.tsx` combines several features in 2,022 lines. Existing user/worktree edits in `apps/api/prisma/seed.ts`, `apps/web/src/AdminPage.tsx`, `apps/web/src/PublicPage.tsx`, and `apps/web/src/public.css` must be preserved.
+- L3: Design decision: keep the typed route table and purposeful custom CSS; improve composition at feature boundaries, not through a wholesale CSS migration or speculative Clean Architecture layers. Forecast: roughly 500-800 authored changed lines across two independent extraction units; `single-pr` is a local delivery strategy, not permission to publish. Each unit retains its tests and docs; no remote action is authorized.
+- L4: T2 completed in `apps/web/src/public/home/HomeView.tsx` and `apps/web/src/public/matches/MatchList.tsx`, leaving route/data ownership in `PublicPage.tsx`. The existing uncommitted removal of the home latest-match outer box/title necessarily traveled with the extracted `HomeView` because its markup moved. Writer checked web lint and 43/43 tests; parent normalized with Prettier and checked format, lint, 46/46 tests after T3, and web build. CSS class-name scan found 46 authored class names and no name absent from TS/TSX/HTML sources; that is a lexical check, not proof of runtime use.
