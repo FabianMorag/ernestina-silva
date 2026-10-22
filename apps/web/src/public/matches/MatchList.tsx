@@ -11,7 +11,7 @@ export function MatchList({ matches }: { matches: Match[] }) {
     )
 
   return (
-    <div className="public-match-list">
+    <div className="grid gap-3">
       {matches.map((match) => (
         <article className="public-match-row" key={match.id}>
           <div className="public-match-context">

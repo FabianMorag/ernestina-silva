@@ -17,13 +17,6 @@
   background: #0c151bd9;
   backdrop-filter: blur(12px);
 }
-.public-header-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
-  min-height: 88px;
-}
 .public-brand {
   display: inline-flex;
   align-items: center;
@@ -86,16 +79,6 @@
 .public-admin-link svg {
   width: 16px;
   height: 16px;
-}
-.public-content {
-  padding-block: 3rem 6rem;
-}
-.public-intro {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
-  margin-bottom: 2rem;
 }
 .public-eyebrow {
   margin: 0 0 0.65rem;
@@ -160,18 +143,6 @@
   font-size: 0.66rem;
   font-weight: 900;
   letter-spacing: 0.1em;
-}
-.public-listing {
-  display: grid;
-  gap: 1rem;
-}
-.public-listing > .public-count {
-  justify-self: end;
-}
-.championship-list,
-.public-match-list {
-  display: grid;
-  gap: 0.75rem;
 }
 .championship-row {
   display: flex;
@@ -345,12 +316,6 @@
 }
 
 @media (max-width: 760px) {
-  .public-header-inner {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding-block: 1rem;
-  }
   .public-nav {
     width: 100%;
     gap: 0.1rem;
@@ -364,9 +329,6 @@
   }
   .public-intro-art {
     display: none;
-  }
-  .public-content {
-    padding-block: 2.5rem 4rem;
   }
   .championship-row {
     flex-wrap: wrap;
@@ -403,23 +365,11 @@
 }
 
 /* Public championship detail: standings and bracket */
-.public-row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: flex-end;
-}
 .public-action-secondary {
   opacity: 0.8;
 }
 .public-detail-section + .public-detail-section,
 .public-board + .public-board {
-  margin-top: 1.5rem;
-}
-.public-access {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
   margin-top: 1.5rem;
 }
 .public-detail-section h3 {
@@ -637,9 +587,6 @@
   }
 }
 @media (max-width: 760px) {
-  .public-row-actions {
-    justify-content: flex-start;
-  }
   .public-bracket {
     --bracket-gap: 36px;
     --bracket-half-gap: 18px;

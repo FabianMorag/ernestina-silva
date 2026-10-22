@@ -279,7 +279,7 @@ export function PublicChampionshipDetail() {
 
   return (
     <main className="public-shell">
-      <div className="public-container public-content">
+      <div className="public-container pt-12 pb-24 [@media(max-width:760px)]:pt-10 [@media(max-width:760px)]:pb-16">
         <Link className="public-back" to="/campeonatos">
           <ArrowLeft aria-hidden="true" /> Volver a campeonatos
         </Link>
@@ -309,7 +309,7 @@ export function PublicChampionshipDetail() {
 
         {!loading && !error && championship && (
           <>
-            <header className="public-intro">
+            <header className="public-intro mb-8 flex items-center justify-between gap-8">
               <div>
                 <p className="public-eyebrow">CAMPEONATO</p>
                 <h1>{championship.name}</h1>

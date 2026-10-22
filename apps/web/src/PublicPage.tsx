@@ -47,7 +47,7 @@ function ChampionshipList({
   }
 
   return (
-    <div className="championship-list">
+    <div className="grid gap-3">
       {championships.map((championship, index) => (
         <article className="championship-row" key={championship.id}>
           <div className="championship-symbol" aria-hidden="true">
@@ -73,7 +73,7 @@ function ChampionshipList({
               )}
             </div>
           </div>
-          <div className="public-row-actions">
+          <div className="flex flex-wrap justify-end gap-2 [@media(max-width:760px)]:justify-start">
             <Link
               className="public-action"
               to={championshipDetailPath(championship.id)}
@@ -131,7 +131,7 @@ export function PublicPage({ page }: { page: PublicRoute }) {
   return (
     <main className="public-shell">
       <header className="public-header">
-        <div className="public-container public-header-inner">
+        <div className="public-container flex min-h-[88px] items-center justify-between gap-8 [@media(max-width:760px)]:flex-col [@media(max-width:760px)]:items-start [@media(max-width:760px)]:gap-3 [@media(max-width:760px)]:py-4">
           <Link to="/" className="public-brand">
             <span className="public-brand-mark">
               <Trophy aria-hidden="true" />
@@ -165,7 +165,7 @@ export function PublicPage({ page }: { page: PublicRoute }) {
       </header>
 
       {page === 'not-found' ? (
-        <section className="public-container public-content">
+        <section className="public-container public-content pt-12 pb-24 [@media(max-width:760px)]:pt-10 [@media(max-width:760px)]:pb-16">
           <p className="public-eyebrow">ERROR 404</p>
           <h1>Página no encontrada</h1>
           <p>Esta ruta no existe.</p>
@@ -181,8 +181,8 @@ export function PublicPage({ page }: { page: PublicRoute }) {
           matches={matches}
         />
       ) : (
-        <div className="public-container public-content">
-          <div className="public-intro">
+        <div className="public-container public-content pt-12 pb-24 [@media(max-width:760px)]:pt-10 [@media(max-width:760px)]:pb-16">
+          <div className="public-intro mb-8 flex items-center justify-between gap-8">
             <div>
               <p className="public-eyebrow">EL ARCHIVO DEL CAMPEONATO</p>
               <h1>
@@ -204,10 +204,10 @@ export function PublicPage({ page }: { page: PublicRoute }) {
           </div>
 
           <section
-            className="public-listing"
+            className="grid gap-4"
             aria-label={publicListingLabel(listing)}
           >
-            <span className="public-count">
+            <span className="public-count justify-self-end">
               {publicCountLabel(listing, visibleCount)}
             </span>
             {error && (

@@ -19,8 +19,8 @@ export function HomeView({
   const summary = summarizeHome(championships, matches)
   const ready = !loading && !error
   return (
-    <div className="public-container public-content">
-      <div className="public-intro">
+    <div className="public-container pt-12 pb-24 [@media(max-width:760px)]:pt-10 [@media(max-width:760px)]:pb-16">
+      <div className="public-intro mb-8 flex items-center justify-between gap-8">
         <div>
           <p className="public-eyebrow">ARCHIVO PÚBLICO</p>
           <h1>Todo el campeonato, partido a partido</h1>
@@ -53,7 +53,7 @@ export function HomeView({
           ))}
       </section>
 
-      <div className="public-access">
+      <div className="mt-6 flex flex-wrap gap-3">
         <Link className="public-action" to="/campeonatos">
           Ver campeonatos <ArrowRight aria-hidden="true" />
         </Link>
