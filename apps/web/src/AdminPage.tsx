@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   ArrowRight,
@@ -10,7 +10,6 @@ import {
   Trophy,
   Trash2,
   Users,
-  X,
 } from 'lucide-react'
 import useSWR, { useSWRConfig } from 'swr'
 import {
@@ -18,6 +17,8 @@ import {
   unassignedPlayers,
   type AdminPage as AdminSection,
 } from './admin-navigation.ts'
+import { PlayersPanel } from './admin/players/PlayersPanel.tsx'
+import { TeamsPanel } from './admin/teams/TeamsPanel.tsx'
 import { signOut } from './session.ts'
 import { resetMatchFormKeepingContext } from './match-form.ts'
 import { groupMatchesByStage } from './match-sections.ts'
@@ -218,14 +219,8 @@ export function AdminPage({
     page === 'championships' && championshipView === 'detail'
       ? (routeChampionshipId ?? '')
       : (searchParams.get('campeonato') ?? '')
-  const [playerDialog, setPlayerDialog] = useState<{ player?: Player } | null>(
-    null,
-  )
-  const playerDialogRef = useRef<HTMLDialogElement>(null)
-  const playerDialogTrigger = useRef<HTMLElement | null>(null)
-  const [teamDialog, setTeamDialog] = useState<Item | null>(null)
-  const teamDialogRef = useRef<HTMLDialogElement>(null)
-  const teamDialogTrigger = useRef<HTMLElement | null>(null)
+  const [playerDialogOpen, setPlayerDialogOpen] = useState(false)
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false)
   const [matchToEdit, setMatchToEdit] = useState<Match | null>(null)
   const [matchStageId, setMatchStageId] = useState('')
   const [matchRound, setMatchRound] = useState('')
@@ -238,48 +233,6 @@ export function AdminPage({
   const [matchToDelete, setMatchToDelete] = useState<Match | null>(null)
   const matchDialogRef = useRef<HTMLDialogElement>(null)
   const matchDialogTrigger = useRef<HTMLElement | null>(null)
-
-  useEffect(() => {
-    const dialog = playerDialogRef.current
-    if (!dialog) return
-    if (playerDialog) {
-      if (!dialog.open) dialog.showModal()
-      return
-    }
-    if (dialog.open) dialog.close()
-    playerDialogTrigger.current?.focus()
-  }, [playerDialog])
-
-  function changePlayerDialog(next: { player?: Player } | null) {
-    if (next)
-      playerDialogTrigger.current =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : null
-    setError('')
-    setPlayerDialog(next)
-  }
-
-  useEffect(() => {
-    const dialog = teamDialogRef.current
-    if (!dialog) return
-    if (teamDialog) {
-      if (!dialog.open) dialog.showModal()
-      return
-    }
-    if (dialog.open) dialog.close()
-    teamDialogTrigger.current?.focus()
-  }, [teamDialog])
-
-  function changeTeamDialog(next: Item | null) {
-    if (next)
-      teamDialogTrigger.current =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : null
-    setError('')
-    setTeamDialog(next)
-  }
 
   useEffect(() => {
     const dialog = editMatchDialogRef.current
@@ -461,20 +414,6 @@ export function AdminPage({
   const matchSections = groupMatchesByStage(visibleMatches)
   const canRecord = selectedRoster.length >= 2
 
-  function createName(
-    event: FormEvent<HTMLFormElement>,
-    path: string,
-    refresh: () => Promise<unknown>,
-  ) {
-    event.preventDefault()
-    const form = event.currentTarget
-    const name = new FormData(form).get('name')
-    void submit(async () => {
-      await request(path, { name })
-      await refresh()
-    }, form)
-  }
-
   return (
     <main className="bg-base-200 text-base-content min-h-screen">
       <header className="bg-base-100 border-base-300 border-b">
@@ -544,8 +483,8 @@ export function AdminPage({
           </p>
         </div>
         {error &&
-          !playerDialog &&
-          !teamDialog &&
+          !playerDialogOpen &&
+          !teamDialogOpen &&
           !matchToEdit &&
           !matchToDelete &&
           !(page === 'matches' && selectedChampionship) && (
@@ -561,261 +500,50 @@ export function AdminPage({
           )}
 
         {page === 'players' && (
-          <section className="space-y-2">
-            <div className="flex flex-wrap items-center justify-end gap-3 px-4">
-              <button
-                className="btn-outline btn btn-sm"
-                onClick={() => changePlayerDialog({})}
-              >
-                Agregar jugador <Plus className="size-4" />
-              </button>
-            </div>
-            {players.length > 0 ? (
-              <ul className="list" aria-label="Lista de jugadores">
-                {players.map((player) => (
-                  <li key={player.id} className="list-row items-center">
-                    <div className="list-col-grow min-w-0">
-                      <p className="truncate text-lg font-bold">
-                        {player.name}
-                      </p>
-                      {player.title && (
-                        <p className="text-base-content/60 truncate text-sm">
-                          {player.title}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      className="btn btn-ghost btn-sm btn-square"
-                      aria-label={`Editar ${player.name}`}
-                      onClick={() => changePlayerDialog({ player })}
-                    >
-                      <Pencil className="size-4" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-base-content/60 px-4 py-6 text-sm">
-                Todavía no hay jugadores.
-              </p>
-            )}
-            <dialog
-              ref={playerDialogRef}
-              className="modal"
-              aria-labelledby="player-dialog-title"
-              onClose={() => changePlayerDialog(null)}
-              onClick={(event) => {
-                if (event.target === event.currentTarget)
-                  changePlayerDialog(null)
-              }}
-            >
-              {playerDialog && (
-                <div className="modal-box">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 id="player-dialog-title" className="text-lg font-bold">
-                      {playerDialog.player
-                        ? `Editar a ${playerDialog.player.name}`
-                        : 'Agregar jugador'}
-                    </h3>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm btn-square"
-                      aria-label="Cerrar"
-                      onClick={() => changePlayerDialog(null)}
-                    >
-                      <X className="size-4" />
-                    </button>
-                  </div>
-                  <form
-                    key={playerDialog.player?.id ?? 'new'}
-                    className="mt-4 grid gap-3"
-                    onSubmit={(event) => {
-                      event.preventDefault()
-                      const form = event.currentTarget
-                      const data = new FormData(form)
-                      const payload = {
-                        name: data.get('name'),
-                        title: data.get('title'),
-                      }
-                      const player = playerDialog.player
-                      void submit(async () => {
-                        if (player)
-                          await patchRequest(
-                            `/admin/players/${player.id}`,
-                            payload,
-                          )
-                        else await request('/admin/players', payload)
-                        await refreshPlayers()
-                        setPlayerDialog(null)
-                      }, form)
-                    }}
-                  >
-                    <label className="form-control">
-                      <span className="label-text mb-1">Nombre</span>
-                      <input
-                        className="input input-bordered w-full"
-                        name="name"
-                        defaultValue={playerDialog.player?.name ?? ''}
-                        maxLength={100}
-                        required
-                        autoFocus
-                      />
-                    </label>
-                    <label className="form-control">
-                      <span className="label-text mb-1">Título (opcional)</span>
-                      <input
-                        className="input input-bordered w-full"
-                        name="title"
-                        defaultValue={playerDialog.player?.title ?? ''}
-                        maxLength={100}
-                      />
-                    </label>
-                    {error && (
-                      <p className="text-error text-sm" role="alert">
-                        {error}
-                      </p>
-                    )}
-                    <div className="modal-action">
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        onClick={() => changePlayerDialog(null)}
-                      >
-                        Cancelar
-                      </button>
-                      <button className="btn btn-primary" disabled={busy}>
-                        {playerDialog.player
-                          ? 'Guardar cambios'
-                          : 'Agregar jugador'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-            </dialog>
-          </section>
+          <PlayersPanel
+            players={players}
+            busy={busy}
+            error={error}
+            onClearError={() => setError('')}
+            onDialogChange={setPlayerDialogOpen}
+            onSave={(player, payload, form, onSaved) =>
+              void submit(async () => {
+                if (player)
+                  await patchRequest(`/admin/players/${player.id}`, payload)
+                else await request('/admin/players', payload)
+                await refreshPlayers()
+                onSaved()
+              }, form)
+            }
+          />
         )}
 
         {page === 'teams' && (
-          <section className="space-y-2">
-            <form
-              className="flex flex-wrap gap-2 px-4"
-              onSubmit={(event) =>
-                createName(event, '/admin/teams', refreshTeams)
-              }
-            >
-              <input
-                className="input input-bordered input-sm min-w-0 flex-1"
-                name="name"
-                placeholder="Nombre del equipo"
-                aria-label="Nombre del equipo"
-                maxLength={100}
-                required
-              />
-              <button className="btn-outline btn btn-sm" disabled={busy}>
-                Agregar equipo <Plus className="size-4" />
-              </button>
-            </form>
-            {teams.length > 0 ? (
-              <ul className="list" aria-label="Lista de equipos">
-                {teams.map((team) => (
-                  <li key={team.id} className="list-row items-center">
-                    <p className="list-col-grow min-w-0 truncate text-lg font-bold">
-                      {team.name}
-                    </p>
-                    <button
-                      className="btn btn-ghost btn-sm btn-square"
-                      aria-label={`Editar ${team.name}`}
-                      onClick={() => changeTeamDialog(team)}
-                    >
-                      <Pencil className="size-4" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-base-content/60 px-4 py-6 text-sm">
-                Todavía no hay equipos. Después podrás asignarlos a cada
-                campeonato.
-              </p>
-            )}
-            <dialog
-              ref={teamDialogRef}
-              className="modal"
-              aria-labelledby="team-dialog-title"
-              onClose={() => changeTeamDialog(null)}
-              onClick={(event) => {
-                if (event.target === event.currentTarget) changeTeamDialog(null)
-              }}
-            >
-              {teamDialog && (
-                <div className="modal-box">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 id="team-dialog-title" className="text-lg font-bold">
-                      Editar a {teamDialog.name}
-                    </h3>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm btn-square"
-                      aria-label="Cerrar"
-                      onClick={() => changeTeamDialog(null)}
-                    >
-                      <X className="size-4" />
-                    </button>
-                  </div>
-                  <form
-                    key={teamDialog.id}
-                    className="mt-4 grid gap-3"
-                    onSubmit={(event) => {
-                      event.preventDefault()
-                      const form = event.currentTarget
-                      const data = new FormData(form)
-                      void submit(async () => {
-                        await patchRequest(`/admin/teams/${teamDialog.id}`, {
-                          name: data.get('name'),
-                        })
-                        await Promise.all([
-                          refreshTeams(),
-                          refreshParticipants(),
-                          refreshMatches(),
-                        ])
-                        setTeamDialog(null)
-                      }, form)
-                    }}
-                  >
-                    <label className="form-control">
-                      <span className="label-text mb-1">Nombre</span>
-                      <input
-                        className="input input-bordered w-full"
-                        name="name"
-                        defaultValue={teamDialog.name}
-                        maxLength={100}
-                        required
-                        autoFocus
-                      />
-                    </label>
-                    {error && (
-                      <p className="text-error text-sm" role="alert">
-                        {error}
-                      </p>
-                    )}
-                    <div className="modal-action">
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        onClick={() => changeTeamDialog(null)}
-                      >
-                        Cancelar
-                      </button>
-                      <button className="btn btn-primary" disabled={busy}>
-                        Guardar cambios
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-            </dialog>
-          </section>
+          <TeamsPanel
+            teams={teams}
+            busy={busy}
+            error={error}
+            onClearError={() => setError('')}
+            onDialogChange={setTeamDialogOpen}
+            onCreate={(form) => {
+              const name = new FormData(form).get('name')
+              void submit(async () => {
+                await request('/admin/teams', { name })
+                await refreshTeams()
+              }, form)
+            }}
+            onSave={(team, name, form, onSaved) =>
+              void submit(async () => {
+                await patchRequest(`/admin/teams/${team.id}`, { name })
+                await Promise.all([
+                  refreshTeams(),
+                  refreshParticipants(),
+                  refreshMatches(),
+                ])
+                onSaved()
+              }, form)
+            }
+          />
         )}
 
         {page === 'championships' && (
