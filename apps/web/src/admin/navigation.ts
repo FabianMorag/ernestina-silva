@@ -1,4 +1,4 @@
-import type { Participant, Player } from './tournament-api.ts'
+import type { Participant, Player } from '../shared/tournament-api.ts'
 
 export type AdminPage =
   'players' | 'teams' | 'championships' | 'matches' | 'not-found'

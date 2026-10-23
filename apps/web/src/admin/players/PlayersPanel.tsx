@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Pencil, Plus, X } from 'lucide-react'
-import type { Player } from '../../tournament-api.ts'
+import type { Player } from '../../shared/tournament-api.ts'
 import {
   playerDialogState,
   type PlayerDialogAction,

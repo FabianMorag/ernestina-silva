@@ -16,12 +16,12 @@ import {
   rosterForChampionship,
   unassignedPlayers,
   type AdminPage as AdminSection,
-} from './admin-navigation.ts'
-import { PlayersPanel } from './admin/players/PlayersPanel.tsx'
-import { TeamsPanel } from './admin/teams/TeamsPanel.tsx'
+} from './navigation.ts'
+import { PlayersPanel } from './players/PlayersPanel.tsx'
+import { TeamsPanel } from './teams/TeamsPanel.tsx'
 import { signOut } from './session.ts'
-import { resetMatchFormKeepingContext } from './match-form.ts'
-import { groupMatchesByStage } from './match-sections.ts'
+import { resetMatchFormKeepingContext } from './matches/form.ts'
+import { groupMatchesByStage } from './matches/sections.ts'
 import {
   deleteRequest,
   patchRequest,
@@ -37,7 +37,7 @@ import {
   type Player,
   type Stage,
   type StageGroup,
-} from './tournament-api.ts'
+} from '../shared/tournament-api.ts'
 
 const adminLinks = [
   {

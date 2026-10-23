@@ -5,7 +5,7 @@ import {
   championshipSummaries,
   matchesForChampionship,
 } from './championships.ts'
-import type { Item, Match, Stage } from './tournament-api.ts'
+import type { Item, Match, Stage } from '../shared/tournament-api.ts'
 
 const championships: Item[] = [
   { id: 'cup', name: 'Copa Ernestina' },

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Pencil, Plus, X } from 'lucide-react'
-import type { Item } from '../../tournament-api.ts'
+import type { Item } from '../../shared/tournament-api.ts'
 
 export function TeamsPanel({
   teams,

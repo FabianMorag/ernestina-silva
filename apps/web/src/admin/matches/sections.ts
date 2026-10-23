@@ -3,7 +3,7 @@ import {
   stageLabel,
   type Match,
   type Stage,
-} from './tournament-api.ts'
+} from '../../shared/tournament-api.ts'
 
 export type MatchSection = {
   key: string

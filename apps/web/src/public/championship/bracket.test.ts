@@ -4,8 +4,8 @@ import {
   bracketRoundClass,
   buildKnockoutBracket,
   connectsToNextRound,
-} from './public-championship/bracket.ts'
-import type { Match } from './tournament-api.ts'
+} from './bracket.ts'
+import type { Match } from '../../shared/tournament-api.ts'
 
 const team: { id: string; name: string } = { id: 't', name: 'Equipo' }
 

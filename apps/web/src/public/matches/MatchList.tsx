@@ -1,5 +1,5 @@
 import { Swords } from 'lucide-react'
-import { stageLabel, type Match } from '../../tournament-api.ts'
+import { stageLabel, type Match } from '../../shared/tournament-api.ts'
 
 export function MatchList({ matches }: { matches: Match[] }) {
   if (!matches.length)

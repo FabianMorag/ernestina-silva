@@ -10,7 +10,7 @@ import {
   type Participant,
   type Stage,
   type StageGroup,
-} from '../tournament-api.ts'
+} from '../../shared/tournament-api.ts'
 import {
   bracketRoundClass,
   buildKnockoutBracket,

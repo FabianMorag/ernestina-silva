@@ -1,22 +1,35 @@
-import type { ComponentType } from 'react'
+import { lazy, Suspense, type ComponentType } from 'react'
 import { Route, Routes } from 'react-router'
 import {
-  AdminChampionshipsRoute,
-  AdminChampionshipsNewRoute,
-  AdminChampionshipDetailRoute,
-  AdminMatchesRoute,
-  AdminNotFoundRoute,
-  AdminPlayersRoute,
-  AdminTeamsRoute,
-} from './routes/AdminRoutes.tsx'
-import {
   HomeRoute,
-  PublicChampionshipDetailRoute,
   PublicChampionshipsRoute,
   PublicMatchesRoute,
   PublicNotFoundRoute,
 } from './routes/PublicRoutes.tsx'
-import { routeTable, type RouteId } from './routes.ts'
+import { routeTable, type RouteId } from './routes/route-table.ts'
+
+function lazyAdminRoute(name: keyof typeof import('./routes/AdminRoutes.tsx')) {
+  return lazy(() =>
+    import('./routes/AdminRoutes.tsx').then((routes) => ({
+      default: routes[name],
+    })),
+  )
+}
+
+const AdminChampionshipsRoute = lazyAdminRoute('AdminChampionshipsRoute')
+const AdminChampionshipsNewRoute = lazyAdminRoute('AdminChampionshipsNewRoute')
+const AdminChampionshipDetailRoute = lazyAdminRoute(
+  'AdminChampionshipDetailRoute',
+)
+const AdminPlayersRoute = lazyAdminRoute('AdminPlayersRoute')
+const AdminTeamsRoute = lazyAdminRoute('AdminTeamsRoute')
+const AdminMatchesRoute = lazyAdminRoute('AdminMatchesRoute')
+const AdminNotFoundRoute = lazyAdminRoute('AdminNotFoundRoute')
+const PublicChampionshipDetailRoute = lazy(() =>
+  import('./public/championship/ChampionshipDetail.tsx').then((module) => ({
+    default: module.PublicChampionshipDetail,
+  })),
+)
 
 const routeComponents: Record<RouteId, ComponentType> = {
   home: HomeRoute,
@@ -35,18 +48,29 @@ const routeComponents: Record<RouteId, ComponentType> = {
 
 function App() {
   return (
-    <Routes>
-      {routeTable.map(({ id, path }) => {
-        const RouteComponent = routeComponents[id]
-        return (
-          <Route
-            key={`${id}:${path}`}
-            path={path}
-            element={<RouteComponent />}
-          />
-        )
-      })}
-    </Routes>
+    <Suspense
+      fallback={
+        <main
+          className="bg-base-200 text-base-content grid min-h-screen place-items-center"
+          role="status"
+        >
+          Cargando página…
+        </main>
+      }
+    >
+      <Routes>
+        {routeTable.map(({ id, path }) => {
+          const RouteComponent = routeComponents[id]
+          return (
+            <Route
+              key={`${id}:${path}`}
+              path={path}
+              element={<RouteComponent />}
+            />
+          )
+        })}
+      </Routes>
+    </Suspense>
   )
 }
 

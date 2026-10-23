@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { resetMatchFormKeepingContext } from './match-form.ts'
+import { resetMatchFormKeepingContext } from './form.ts'
 
 test('resetting a match keeps its championship, stage and group but clears the next result', () => {
   const controls = {

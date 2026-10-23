@@ -1,4 +1,4 @@
-import { AdminPage } from '../AdminPage.tsx'
+import { AdminPage } from '../admin/AdminPage.tsx'
 import { Navigate, useSearchParams } from 'react-router'
 
 export function AdminChampionshipsRoute() {

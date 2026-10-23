@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { homeTotalsLine, summarizeHome } from './home.ts'
-import type { Item, Match } from './tournament-api.ts'
+import { homeTotalsLine, summarizeHome } from './summary.ts'
+import type { Item, Match } from '../../shared/tournament-api.ts'
 
 const cup: Item = { id: 'cup', name: 'Copa' }
 const league: Item = { id: 'league', name: 'Liga' }

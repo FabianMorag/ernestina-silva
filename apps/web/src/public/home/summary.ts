@@ -1,4 +1,4 @@
-import type { Item, Match } from './tournament-api.ts'
+import type { Item, Match } from '../../shared/tournament-api.ts'
 
 export type HomeSummary = {
   championshipCount: number

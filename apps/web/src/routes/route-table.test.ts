@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { resolveRoute, withChampionshipParam } from './routes.ts'
+import { resolveRoute, withChampionshipParam } from './route-table.ts'
 
 test('public pages keep their URLs and do not route through admin', () => {
   assert.deepEqual(resolveRoute('/'), {

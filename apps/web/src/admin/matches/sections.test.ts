@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { groupMatchesByStage } from './match-sections.ts'
-import type { Match, Stage, StageGroup } from './tournament-api.ts'
+import { groupMatchesByStage } from './sections.ts'
+import type { Match, Stage, StageGroup } from '../../shared/tournament-api.ts'
 
 const group: StageGroup = { id: 'group-b', stageId: 'groups', name: 'B' }
 const groupA: StageGroup = { id: 'group-a', stageId: 'groups', name: 'A' }

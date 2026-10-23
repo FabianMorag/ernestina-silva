@@ -3,7 +3,7 @@ import {
   knockoutRoundLabel,
   knockoutSlots,
   type Match,
-} from '../tournament-api.ts'
+} from '../../shared/tournament-api.ts'
 
 export type BracketSlot = { slot: number; match: Match | null }
 export type BracketRound = {

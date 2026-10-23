@@ -4,8 +4,13 @@ import {
   calculatePlayerStandings,
   groupStageMatches,
   leagueStageMatches,
-} from './public-championship/standings.ts'
-import type { Match, Participant, Player, Item } from './tournament-api.ts'
+} from './standings.ts'
+import type {
+  Match,
+  Participant,
+  Player,
+  Item,
+} from '../../shared/tournament-api.ts'
 
 const teamRojo: Item = { id: 't-rojo', name: 'Rojo FC' }
 const teamAzul: Item = { id: 't-azul', name: 'Azul FC' }

@@ -1,4 +1,4 @@
-import type { Player } from '../../tournament-api.ts'
+import type { Player } from '../../shared/tournament-api.ts'
 
 export type PlayerDialogAction =
   { type: 'create' } | { type: 'edit'; player: Player } | { type: 'close' }

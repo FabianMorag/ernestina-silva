@@ -1,8 +1,8 @@
 import { ArrowRight, Trophy } from 'lucide-react'
 import { Link } from 'react-router'
-import { homeTotalsLine, summarizeHome } from '../../home.ts'
-import { championshipDetailPath } from '../../championships.ts'
-import { type Item, type Match } from '../../tournament-api.ts'
+import { homeTotalsLine, summarizeHome } from './summary.ts'
+import { championshipDetailPath } from '../championships.ts'
+import { type Item, type Match } from '../../shared/tournament-api.ts'
 import { MatchList } from '../matches/MatchList.tsx'
 
 export function HomeView({

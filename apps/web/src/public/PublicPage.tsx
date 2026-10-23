@@ -8,8 +8,8 @@ import {
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router'
 import useSWR from 'swr'
-import { HomeView } from './public/home/HomeView.tsx'
-import { MatchList } from './public/matches/MatchList.tsx'
+import { HomeView } from './home/HomeView.tsx'
+import { MatchList } from './matches/MatchList.tsx'
 import {
   championshipDetailPath,
   championshipSummaries,
@@ -20,14 +20,14 @@ import {
   publicCountLabel,
   publicListingLabel,
   type PublicListing,
-} from './public-listing.ts'
+} from './listing.ts'
 import {
   request,
   stageLabel,
   type Item,
   type Match,
   type Stage,
-} from './tournament-api.ts'
+} from '../shared/tournament-api.ts'
 import './public.css'
 
 type PublicRoute = 'home' | 'matches' | 'championships' | 'not-found'

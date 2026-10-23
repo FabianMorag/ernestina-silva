@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { publicCountLabel, publicListingLabel } from './public-listing.ts'
+import { publicCountLabel, publicListingLabel } from './listing.ts'
 
 test('counts are pluralized in Spanish for both listings', () => {
   assert.equal(publicCountLabel('championships', 2), '2 CAMPEONATOS')

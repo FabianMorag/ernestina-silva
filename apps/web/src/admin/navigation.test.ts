@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { rosterForChampionship, unassignedPlayers } from './admin-navigation.ts'
-import type { Participant, Player } from './tournament-api.ts'
+import { rosterForChampionship, unassignedPlayers } from './navigation.ts'
+import type { Participant, Player } from '../shared/tournament-api.ts'
 
 const players: Player[] = [
   { id: 'carrasco', name: 'Carrasco', title: null },

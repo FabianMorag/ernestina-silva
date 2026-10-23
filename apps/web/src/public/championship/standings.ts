@@ -1,4 +1,4 @@
-import type { Match, Participant } from '../tournament-api.ts'
+import type { Match, Participant } from '../../shared/tournament-api.ts'
 
 export type PlayerStandingRow = {
   playerId: string

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { playerDialogState } from './admin/players/player-dialog-state.ts'
+import { playerDialogState } from './player-dialog-state.ts'
 
 test('opening the add-player dialog opens an empty form', () => {
   assert.deepEqual(playerDialogState({ type: 'create' }), {
