@@ -1,0 +1,16 @@
+.codegraph/
+.atl/
+.agents/
+.claude/
+.engram/
+.vscode/
+odd/
+.env
+.env.*
+database_url.txt
+compose.yaml
+skills-lock.json
+coverage/
+apps/api/dist/
+apps/web/dist/
+apps/api/src/generated/prisma/
