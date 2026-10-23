@@ -18,7 +18,7 @@ describe('team seed', () => {
     await seedTeams({ team: { upsert } } as never);
     expect(upsert).toHaveBeenCalledTimes(19);
     expect(teams.map(({ name }) => name)).toEqual([
-      'Bayern Munich', 'Manchester City', 'Inter de Milán', 'Arsenal', 'Real Madrid', 'PSG', 'Barcelona',
+      'Bayern Munich', 'Manchester City', 'Inter de Milán', 'Arsenal', 'Real Madrid', 'Paris Saint-Germain F.C.', 'FC Barcelona',
       'Liverpool', 'Atlético Madrid', 'España', 'Bélgica', 'Inglaterra', 'Brasil', 'Alemania', 'Italia',
       'Holanda', 'Portugal', 'Francia', 'Argentina',
     ]);
