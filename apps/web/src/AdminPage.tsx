@@ -635,16 +635,16 @@ export function AdminPage({
               </section>
             )}
             {championshipView === 'create' && (
-              <section className="max-w-2xl">
-                <div className="space-y-4">
+              <section className="max-w-4xl">
+                <div className="space-y-5">
                   <Link
-                    className="link link-primary text-sm"
+                    className="link link-primary inline-flex min-h-11 items-center text-sm"
                     to="/admin/campeonatos"
                   >
                     ← Volver a campeonatos
                   </Link>
                   <form
-                    className="border-base-300 bg-base-100 space-y-6 rounded-xl border p-5 sm:p-7"
+                    className="border-base-300 bg-base-100 space-y-8 rounded-2xl border p-5 sm:p-8"
                     onSubmit={(event) => {
                       event.preventDefault()
                       const form = event.currentTarget
@@ -677,29 +677,29 @@ export function AdminPage({
                       }, form)
                     }}
                   >
-                    <label className="flex flex-col gap-2 text-sm font-medium">
+                    <label className="flex flex-col gap-3 text-sm font-medium">
                       Nombre del campeonato
                       <input
-                        className="input input-bordered w-full"
+                        className="input input-bordered h-12 w-full text-base"
                         name="name"
                         placeholder="Ej. Copa de primavera"
                         maxLength={100}
                         required
                       />
                     </label>
-                    <fieldset className="space-y-2">
+                    <fieldset className="space-y-4">
                       <legend className="text-sm font-medium">
                         Etapas (elige al menos una)
                       </legend>
-                      <div className="flex flex-wrap gap-x-6 gap-y-2">
+                      <div className="grid gap-3 sm:grid-cols-3">
                         {(['GROUP', 'LEAGUE', 'KNOCKOUT'] as const).map(
                           (kind) => (
                             <label
-                              className="flex cursor-pointer items-center gap-2"
+                              className="border-base-300 hover:border-primary/60 has-checked:border-primary has-checked:bg-primary/10 focus-within:outline-primary flex min-h-20 cursor-pointer items-center gap-3 rounded-xl border p-4 transition-colors focus-within:outline-2 focus-within:outline-offset-2"
                               key={kind}
                             >
                               <input
-                                className="checkbox checkbox-sm"
+                                className="checkbox checkbox-primary shrink-0"
                                 type="checkbox"
                                 name="stageKinds"
                                 value={kind}
@@ -711,13 +711,18 @@ export function AdminPage({
                                     ?.setCustomValidity('')
                                 }}
                               />
-                              {stageLabel(kind)}
+                              <span className="font-medium">
+                                {stageLabel(kind)}
+                              </span>
                             </label>
                           ),
                         )}
                       </div>
                     </fieldset>
-                    <button className="btn btn-primary" disabled={busy}>
+                    <button
+                      className="btn btn-primary w-full sm:ml-auto sm:w-auto sm:min-w-52"
+                      disabled={busy}
+                    >
                       Crear campeonato <Plus className="size-4" />
                     </button>
                   </form>
