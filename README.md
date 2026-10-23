@@ -78,3 +78,14 @@ To exercise the assignment/match concurrency regression against a fresh throwawa
 ## Deployment
 
 Deploy `apps/web` and `apps/api` as separate projects. For Vercel, set each project's Root Directory to its app directory and keep the workspace lockfile at the repository root. Connect the hosted PostgreSQL integration to the API project and provide `DATABASE_URL` there; do not expose it to Vite. The Compose database is local only. Run migrations against the hosted database before starting the API and create a real admin account first. The web app is a client-side SPA, so configure its static host to serve `index.html` for direct loads or refreshes of client routes such as `/admin/jugadores` and `/partidos`; this is a static-host fallback, not a server added to the web app. The web app's `/api` proxy is development-only, and the current strict same-site session cookie is designed for local same-origin use. Configure production API routing and authentication before deployment. The public knockout bracket is drawn with CSS grid connectors and a staggered CSS reveal that is disabled under `prefers-reduced-motion`; no animation library is used.
+
+Provision an administrator only after applying migrations to the intended database. From `apps/api`, supply `DATABASE_URL` securely and run:
+
+```sh
+pnpm exec prisma migrate deploy
+read -r -s 'ADMIN_PASSWORD?Admin password: '; printf '\n'
+printf '%s\n' "$ADMIN_PASSWORD" | pnpm admin:create owner
+unset ADMIN_PASSWORD
+```
+
+The command reads the password from standard input, requires at least 12 UTF-8 bytes, stores a salted `scrypt` hash, and refuses to replace an existing username. Never put the password in a command argument, commit it, or run the command against production without confirming the target database. The local `admin/admin` account is not eligible for production login.
