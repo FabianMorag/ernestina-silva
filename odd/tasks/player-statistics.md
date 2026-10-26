@@ -11,7 +11,7 @@ Branch: `feat/player-statistics` · Delivery: `exception-ok` (user waived line l
 
 ## Tasks
 - T1 [S3-S4] inline — complete — Added type schema/backfill, admin creation validation/UI and contract tests. Risk: item 1 (migration) and item 3 (required create contract). Commit: recorded in L6.
-- T2 [S1-S3,S5] inline — complete — Built statistics calculation/view, updated public navigation/routing and tests. Risk: item 3 (public route compatibility). Commit: recorded in L9.
+- T2 [S1-S3,S5] inline — complete — Built statistics calculation/view, updated public navigation/routing and tests. Risk: item 3 (public route compatibility). Commit: `9e163c8`.
 
 ## Log
 - L1 (2026-10-26): “me gutstaría reemplazar la pagina de historial de partidos por una pagina de estadisticas. Me gustaría ver tablas globales de partidos jugados, ganados, empatados, perdidos, puntos, goles a favor, goles en contra, disferencia de goles, y rendimiento porcentual. eso para cada jugador, podriamos separarlo para cada tipo de campeonato, normalmente tenemos dos campeonatos diferentes cada año. Entonces serían 3 tablas, "copa america" "mundial" y "general", me expico?”
@@ -22,3 +22,4 @@ Branch: `feat/player-statistics` · Delivery: `exception-ok` (user waived line l
 - L6 (2026-10-26): T1 commit `265141c` (`feat: add championship type to persisted tournaments`). Native RDD is disabled globally; no native review was started.
 - L7 (2026-10-26): T2 RED: new aggregate and route tests failed before implementation; zero-game player test then failed until player catalog was included. GREEN: 52/52 web tests, oxlint, Prettier check, build, and diff check. Independent verifier passed route redirect, three-table SSR, aggregate cases and baseline route/count invariants. Local web and API endpoints return HTTP 200 after restarting Nest watch (an API build had displaced its dist output). T2 has no commit yet: accumulated authored changes exceed the review budget, and `ask-on-risk` requires the user's chain-strategy choice before the next commit.
 - L8 (2026-10-26): “haz los commits semanticos, ignora limite de lieas”. User waived the line-count gate; keep behavior/tests/docs together in conventional commits without creating a PR or pushing.
+- L9 (2026-10-26): T2 committed as `9e163c8` (`feat(public): add cumulative player statistics`). Earlier uncommitted public-heading work was committed separately as `fd6cf26` (`style(public): simplify home and championship headings`). Pre-existing package.json and pnpm-lock.yaml changes remain unstaged and uncommitted. No remote push or production migration was performed.
