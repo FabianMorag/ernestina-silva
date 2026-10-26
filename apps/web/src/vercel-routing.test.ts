@@ -11,15 +11,23 @@ async function getRewrites() {
 
 test('proxies API requests to the API project before the SPA fallback', async () => {
   const rewrites = await getRewrites()
-  assert.deepEqual(rewrites[0], {
+  assert.deepEqual(rewrites[1], {
     source: '/api/:path*',
     destination: 'https://ernestina-silva.vercel.app/:path*',
   })
 })
 
+test('proxies the trailing-slash API root instead of serving the SPA', async () => {
+  const rewrites = await getRewrites()
+  assert.deepEqual(rewrites[0], {
+    source: '/api/',
+    destination: 'https://ernestina-silva.vercel.app/',
+  })
+})
+
 test('serves the SPA entrypoint for deep links', async () => {
   const rewrites = await getRewrites()
-  assert.deepEqual(rewrites[1], {
+  assert.deepEqual(rewrites[2], {
     source: '/(.*)',
     destination: '/index.html',
   })
