@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { resolveRoute, withChampionshipParam } from './route-table.ts'
+import { resolveRoute } from './route-table.ts'
 
 test('public pages keep their URLs and do not route through admin', () => {
   assert.deepEqual(resolveRoute('/'), {
@@ -11,7 +11,12 @@ test('public pages keep their URLs and do not route through admin', () => {
   assert.deepEqual(resolveRoute('/partidos'), {
     id: 'publicMatches',
     area: 'public',
-    page: 'matches',
+    page: 'statistics',
+  })
+  assert.deepEqual(resolveRoute('/estadisticas'), {
+    id: 'publicStatistics',
+    area: 'public',
+    page: 'statistics',
   })
   assert.deepEqual(resolveRoute('/campeonatos'), {
     id: 'publicChampionships',
@@ -21,7 +26,7 @@ test('public pages keep their URLs and do not route through admin', () => {
   assert.deepEqual(resolveRoute('/partidos/'), {
     id: 'publicMatches',
     area: 'public',
-    page: 'matches',
+    page: 'statistics',
   })
 })
 
@@ -79,23 +84,6 @@ test('unknown paths show the not-found page of their area', () => {
     area: 'public',
     page: 'not-found',
   })
-})
-
-test('championship selection updates only its search parameter', () => {
-  assert.equal(
-    withChampionshipParam(
-      new URLSearchParams('view=compact'),
-      'cup',
-    ).toString(),
-    'view=compact&campeonato=cup',
-  )
-  assert.equal(
-    withChampionshipParam(
-      new URLSearchParams('view=compact&campeonato=cup'),
-      '',
-    ).toString(),
-    'view=compact',
-  )
 })
 
 test('public championship detail has its own direct URL', () => {

@@ -6,31 +6,27 @@ import {
   Swords,
   Trophy,
 } from 'lucide-react'
-import { Link, useSearchParams } from 'react-router'
+import { Link } from 'react-router'
 import useSWR from 'swr'
 import { HomeView } from './home/HomeView.tsx'
-import { MatchList } from './matches/MatchList.tsx'
+import { StatisticsView } from './statistics/StatisticsView.tsx'
 import {
   championshipDetailPath,
   championshipSummaries,
-  matchesForChampionship,
   type ChampionshipSummary,
 } from './championships.ts'
-import {
-  publicCountLabel,
-  publicListingLabel,
-  type PublicListing,
-} from './listing.ts'
+import { publicCountLabel, publicListingLabel } from './listing.ts'
 import {
   request,
   stageLabel,
-  type Item,
+  type Championship,
   type Match,
+  type Player,
   type Stage,
 } from '../shared/tournament-api.ts'
 import './public.css'
 
-type PublicRoute = 'home' | 'matches' | 'championships' | 'not-found'
+type PublicRoute = 'home' | 'statistics' | 'championships' | 'not-found'
 
 function ChampionshipList({
   championships,
@@ -81,13 +77,6 @@ function ChampionshipList({
             >
               Ver detalle <ArrowRight aria-hidden="true" />
             </Link>
-            <Link
-              className="public-action public-action-secondary"
-              to={`/partidos?campeonato=${encodeURIComponent(championship.id)}`}
-              aria-label={`Ver partidos de ${championship.name}`}
-            >
-              Ver partidos
-            </Link>
           </div>
         </article>
       ))}
@@ -96,7 +85,6 @@ function ChampionshipList({
 }
 
 export function PublicPage({ page }: { page: PublicRoute }) {
-  const [searchParams] = useSearchParams()
   const {
     data: matches = [],
     error: matchesError,
@@ -106,27 +94,26 @@ export function PublicPage({ page }: { page: PublicRoute }) {
     data: championships = [],
     error: championshipsError,
     isLoading: championshipsLoading,
-  } = useSWR<Item[]>('/tournament/championships', request)
+  } = useSWR<Championship[]>('/tournament/championships', request)
   const {
     data: stages = [],
     error: stagesError,
     isLoading: stagesLoading,
-  } = useSWR<Stage[]>('/tournament/stages', request)
+  } = useSWR<Stage[]>(
+    page === 'championships' ? '/tournament/stages' : null,
+    request,
+  )
+  const {
+    data: players = [],
+    error: playersError,
+    isLoading: playersLoading,
+  } = useSWR<Player[]>(
+    page === 'statistics' ? '/tournament/players' : null,
+    request,
+  )
   const error = matchesError || championshipsError || stagesError
   const loading = matchesLoading || championshipsLoading || stagesLoading
   const summaries = championshipSummaries(championships, matches, stages)
-  const selectedId = page === 'matches' ? searchParams.get('campeonato') : null
-  const selectedChampionship = selectedId
-    ? championships.find((item) => item.id === selectedId)
-    : undefined
-  const visibleMatches = matchesForChampionship(matches, selectedId)
-  const listingChampionships = page === 'championships'
-  const listing: PublicListing = listingChampionships
-    ? 'championships'
-    : 'matches'
-  const visibleCount = listingChampionships
-    ? championships.length
-    : visibleMatches.length
 
   return (
     <main className="public-shell">
@@ -152,10 +139,10 @@ export function PublicPage({ page }: { page: PublicRoute }) {
               Campeonatos
             </Link>
             <Link
-              aria-current={page === 'matches' ? 'page' : undefined}
-              to="/partidos"
+              aria-current={page === 'statistics' ? 'page' : undefined}
+              to="/estadisticas"
             >
-              Partidos
+              Estadísticas
             </Link>
             <Link className="public-admin-link" to="/admin">
               <ShieldCheck aria-hidden="true" /> Administración
@@ -166,7 +153,6 @@ export function PublicPage({ page }: { page: PublicRoute }) {
 
       {page === 'not-found' ? (
         <section className="public-container public-content pt-12 pb-24 [@media(max-width:760px)]:pt-10 [@media(max-width:760px)]:pb-16">
-          <p className="public-eyebrow">ERROR 404</p>
           <h1>Página no encontrada</h1>
           <p>Esta ruta no existe.</p>
           <Link className="public-back" to="/">
@@ -180,22 +166,22 @@ export function PublicPage({ page }: { page: PublicRoute }) {
           championships={championships}
           matches={matches}
         />
+      ) : page === 'statistics' ? (
+        <StatisticsView
+          error={Boolean(matchesError || championshipsError || playersError)}
+          loading={matchesLoading || championshipsLoading || playersLoading}
+          championships={championships}
+          matches={matches}
+          players={players}
+        />
       ) : (
         <div className="public-container public-content pt-12 pb-24 [@media(max-width:760px)]:pt-10 [@media(max-width:760px)]:pb-16">
           <div className="public-intro mb-8 flex items-center justify-between gap-8">
             <div>
-              <p className="public-eyebrow">EL ARCHIVO DEL CAMPEONATO</p>
-              <h1>
-                {page === 'matches'
-                  ? selectedChampionship
-                    ? `Partidos · ${selectedChampionship.name}`
-                    : 'Historial de partidos'
-                  : 'Campeonatos'}
-              </h1>
+              <h1>Campeonatos</h1>
               <p>
-                {listingChampionships
-                  ? 'Explora los campeonatos y revive cada resultado de Ernestina Silva.'
-                  : 'Todos los resultados registrados, partido a partido.'}
+                Explora los campeonatos y revive cada resultado de Ernestina
+                Silva.
               </p>
             </div>
             <span className="public-intro-art" aria-hidden="true">
@@ -203,12 +189,9 @@ export function PublicPage({ page }: { page: PublicRoute }) {
             </span>
           </div>
 
-          <section
-            className="grid gap-4"
-            aria-label={publicListingLabel(listing)}
-          >
+          <section className="grid gap-4" aria-label={publicListingLabel}>
             <span className="public-count justify-self-end">
-              {publicCountLabel(listing, visibleCount)}
+              {publicCountLabel(championships.length)}
             </span>
             {error && (
               <div className="public-message" role="alert">
@@ -221,19 +204,10 @@ export function PublicPage({ page }: { page: PublicRoute }) {
                 Cargando datos…
               </div>
             )}
-            {!loading &&
-              !error &&
-              (listingChampionships ? (
-                <ChampionshipList championships={summaries} />
-              ) : (
-                <MatchList matches={visibleMatches} />
-              ))}
+            {!loading && !error && (
+              <ChampionshipList championships={summaries} />
+            )}
           </section>
-          {page === 'matches' && selectedChampionship && (
-            <Link className="public-back" to="/">
-              <ArrowLeft aria-hidden="true" /> Volver a campeonatos
-            </Link>
-          )}
         </div>
       )}
     </main>

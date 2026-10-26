@@ -1,3 +1,4 @@
+import { Navigate } from 'react-router'
 import { PublicPage } from '../public/PublicPage.tsx'
 
 export function HomeRoute() {
@@ -5,7 +6,11 @@ export function HomeRoute() {
 }
 
 export function PublicMatchesRoute() {
-  return <PublicPage page="matches" />
+  return <Navigate to="/estadisticas" replace />
+}
+
+export function PublicStatisticsRoute() {
+  return <PublicPage page="statistics" />
 }
 
 export function PublicChampionshipsRoute() {

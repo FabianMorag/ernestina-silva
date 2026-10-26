@@ -4,6 +4,7 @@ import {
   HomeRoute,
   PublicChampionshipsRoute,
   PublicMatchesRoute,
+  PublicStatisticsRoute,
   PublicNotFoundRoute,
 } from './routes/PublicRoutes.tsx'
 import { routeTable, type RouteId } from './routes/route-table.ts'
@@ -34,6 +35,7 @@ const PublicChampionshipDetailRoute = lazy(() =>
 const routeComponents: Record<RouteId, ComponentType> = {
   home: HomeRoute,
   publicMatches: PublicMatchesRoute,
+  publicStatistics: PublicStatisticsRoute,
   publicChampionships: PublicChampionshipsRoute,
   publicChampionshipDetail: PublicChampionshipDetailRoute,
   adminChampionships: AdminChampionshipsRoute,

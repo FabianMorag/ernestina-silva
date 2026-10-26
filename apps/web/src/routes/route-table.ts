@@ -3,6 +3,7 @@ import { matchRoutes } from 'react-router'
 export type RouteId =
   | 'home'
   | 'publicMatches'
+  | 'publicStatistics'
   | 'publicChampionships'
   | 'publicChampionshipDetail'
   | 'adminChampionships'
@@ -17,6 +18,7 @@ export type RouteId =
 export type Area = 'public' | 'admin'
 export type RoutePage =
   | 'home'
+  | 'statistics'
   | 'matches'
   | 'championships'
   | 'championship'
@@ -35,7 +37,13 @@ export const routeTable: RouteEntry[] = [
     id: 'publicMatches',
     path: '/partidos',
     area: 'public',
-    page: 'matches',
+    page: 'statistics',
+  },
+  {
+    id: 'publicStatistics',
+    path: '/estadisticas',
+    area: 'public',
+    page: 'statistics',
   },
   {
     id: 'publicChampionships',
@@ -95,14 +103,4 @@ export function resolveRoute(pathname: string): ResolvedRoute {
   if (!match) return { id: 'publicNotFound', area: 'public', page: 'not-found' }
   const { id, area, page } = match.route
   return { id, area, page }
-}
-
-export function withChampionshipParam(
-  searchParams: URLSearchParams,
-  championshipId: string,
-): URLSearchParams {
-  const nextSearchParams = new URLSearchParams(searchParams)
-  if (championshipId) nextSearchParams.set('campeonato', championshipId)
-  else nextSearchParams.delete('campeonato')
-  return nextSearchParams
 }
