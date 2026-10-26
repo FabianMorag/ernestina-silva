@@ -311,7 +311,6 @@ export function PublicChampionshipDetail() {
           <>
             <header className="public-intro mb-8 flex items-center justify-between gap-8">
               <div>
-                <p className="public-eyebrow">CAMPEONATO</p>
                 <h1>{championship.name}</h1>
                 <p>
                   {championshipMatches.length}{' '}

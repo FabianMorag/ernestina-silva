@@ -80,13 +80,6 @@
   width: 16px;
   height: 16px;
 }
-.public-eyebrow {
-  margin: 0 0 0.65rem;
-  color: var(--public-lime);
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.17em;
-}
 .public-intro h1,
 .public-content > h1 {
   margin: 0;
