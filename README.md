@@ -35,7 +35,7 @@ pnpm --filter @ernestina-silva/api exec prisma db seed
 
 The seed is safe to rerun: fixed player and team IDs prevent duplicates, and existing names or titles are never overwritten.
 
-With `ENABLE_LOCAL_ADMIN=true` in the API `.env`, an empty local database gets a temporary `admin` / `admin` account. This account cannot sign in when `NODE_ENV=production`, even if the database is reused. Public pages at `/`, `/partidos`, and `/campeonatos` require no account. Sign in at `/admin` to manage the tournament. The admin has separate pages for players (`/admin/jugadores`), teams (`/admin/equipos`), championships (`/admin/campeonatos`), and match results (`/admin/partidos`). Create a championship at `/admin/campeonatos/nuevo` with at least one stage type (groups, league, or knockout), then open its detail to enroll players and assign each a team. Existing championships can add any missing stage type without a custom stage name. The match form offers only players enrolled in the selected championship and uses their assigned teams. A player can have another team in a later championship. Do not use the temporary account for deployed environments.
+With `ENABLE_LOCAL_ADMIN=true` in the API `.env`, an empty local database gets a temporary `admin` / `admin` account. This account cannot sign in when `NODE_ENV=production`, even if the database is reused. Public pages at `/`, `/partidos`, and `/campeonatos` require no account. Sign in at `/admin` to manage the tournament. The admin has separate pages for players (`/admin/jugadores`), teams (`/admin/equipos`), championships (`/admin/campeonatos`), and match results (`/admin/partidos`). Create a championship at `/admin/campeonatos/nuevo` with its type (Copa América or Mundial) and at least one stage type (groups, league, or knockout), then open its detail to enroll players and assign each a team. Existing championships can add any missing stage type without a custom stage name. The match form offers only players enrolled in the selected championship and uses their assigned teams. A player can have another team in a later championship. Do not use the temporary account for deployed environments.
 
 For a group stage, add named groups (such as A and B) on the championship admin page. New group-stage matches require one of those groups; the match editor can assign a group to older matches, which remain unassigned after migration. Both admin and public match lists show the group when one is assigned.
 
@@ -63,6 +63,8 @@ pnpm db:generate
 ```
 
 Prisma Client is also generated automatically by the API build, development, and e2e test scripts. The generated client is ignored by Git.
+
+The championship-type migration classifies existing editions whose names begin with `Copa América`, `Copa America`, or `Mundial`. It refuses other names instead of guessing a type; resolve those records before applying the migration to a database with additional championship categories.
 
 ## Checks
 

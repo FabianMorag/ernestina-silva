@@ -47,9 +47,15 @@ model Team {
 model Championship {
   id        String   @id @default(cuid())
   name      String   @unique
+  type      ChampionshipType
   stages    Stage[]
   matches   Match[]
   participants ChampionshipParticipant[]
+}
+
+enum ChampionshipType {
+  COPA_AMERICA
+  WORLD_CUP
 }
 
 model ChampionshipParticipant {

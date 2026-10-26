@@ -170,17 +170,27 @@ describe('TournamentController', () => {
 
   it('creates a championship with its selected fixed stages', async () => {
     await expect(new TournamentController(prisma as never).createChampionship({
-      name: ' Copa ', stageKinds: ['GROUP', 'KNOCKOUT'],
+      name: ' Copa ', type: 'COPA_AMERICA', stageKinds: ['GROUP', 'KNOCKOUT'],
     })).resolves.toEqual({ id: 'championship' });
     expect(prisma.championship.create).toHaveBeenCalledWith({
-      data: { name: 'Copa', stages: { create: [{ kind: 'GROUP' }, { kind: 'KNOCKOUT' }] } },
+      data: { name: 'Copa', type: 'COPA_AMERICA', stages: { create: [{ kind: 'GROUP' }, { kind: 'KNOCKOUT' }] } },
     });
+  });
+
+  it('requires an explicit supported championship type before saving', () => {
+    const controller = new TournamentController(prisma as never);
+    for (const type of [undefined, null, 'OTHER', 'copa america']) {
+      expect(() => controller.createChampionship({ name: 'Copa', type, stageKinds: ['GROUP'] }))
+        .toThrow(BadRequestException);
+    }
+    expect(prisma.championship.create).not.toHaveBeenCalled();
   });
 
   it('requires at least one valid, non-repeated stage type before creating a championship', () => {
     const controller = new TournamentController(prisma as never);
     for (const stageKinds of [[], ['GROUP', 'GROUP'], ['OTHER'], 'GROUP']) {
-      expect(() => controller.createChampionship({ name: 'Copa', stageKinds })).toThrow(BadRequestException);
+      expect(() => controller.createChampionship({ name: 'Copa', type: 'COPA_AMERICA', stageKinds }))
+        .toThrow(BadRequestException);
     }
     expect(prisma.championship.create).not.toHaveBeenCalled();
   });

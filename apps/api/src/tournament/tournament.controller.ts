@@ -1,6 +1,6 @@
 import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
-import { StageKind } from '../generated/prisma/enums.js';
+import { ChampionshipType, StageKind } from '../generated/prisma/enums.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { parseKnockoutPlacement, parseMatchInput } from './match-input.js';
@@ -82,6 +82,10 @@ export class TournamentController {
   @Post('championships')
   createChampionship(@Body() body: unknown) {
     const name = nameFrom(body);
+    const type = (body as { type?: unknown } | null)?.type;
+    if (type !== ChampionshipType.COPA_AMERICA && type !== ChampionshipType.WORLD_CUP) {
+      throw new BadRequestException('Select a supported championship type');
+    }
     const stageKinds = (body as { stageKinds?: unknown } | null)?.stageKinds;
     if (!Array.isArray(stageKinds) || stageKinds.length === 0 ||
       stageKinds.some((kind) => !Object.values(StageKind).includes(kind as StageKind)) ||
@@ -90,6 +94,7 @@ export class TournamentController {
     }
     return this.prisma.championship.create({ data: {
       name,
+      type,
       stages: { create: stageKinds.map((kind) => ({ kind: kind as StageKind })) },
     } });
   }

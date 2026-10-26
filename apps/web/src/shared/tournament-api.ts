@@ -1,4 +1,10 @@
 export type Item = { id: string; name: string }
+export type ChampionshipType = 'COPA_AMERICA' | 'WORLD_CUP'
+export type Championship = Item & { type: ChampionshipType }
+
+export function championshipTypeLabel(type: ChampionshipType): string {
+  return type === 'COPA_AMERICA' ? 'Copa América' : 'Mundial'
+}
 export type Player = Item & { title: string | null }
 export type Participant = {
   id: string

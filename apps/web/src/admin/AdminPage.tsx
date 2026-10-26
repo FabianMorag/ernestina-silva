@@ -31,6 +31,8 @@ import {
   knockoutRoundLabel,
   knockoutSlots,
   stageLabel,
+  championshipTypeLabel,
+  type Championship,
   type Item,
   type Match,
   type Participant,
@@ -193,7 +195,7 @@ export function AdminPage({
     data: championships = [],
     mutate: refreshChampionships,
     isLoading: loadingChampionships,
-  } = useSWR<Item[]>(signedIn ? '/admin/championships' : null, request)
+  } = useSWR<Championship[]>(signedIn ? '/admin/championships' : null, request)
   const {
     data: stages = [],
     mutate: refreshStages,
@@ -601,6 +603,9 @@ export function AdminPage({
                               <h4 className="truncate font-bold">
                                 {item.name}
                               </h4>
+                              <p className="text-base-content/60 text-xs">
+                                {championshipTypeLabel(item.type)}
+                              </p>
                               <p className="text-primary mt-0.5 text-sm">
                                 {championshipStages.length
                                   ? championshipStages
@@ -660,10 +665,11 @@ export function AdminPage({
                         return
                       }
                       void submit(async () => {
-                        const created = await request<Item>(
+                        const created = await request<Championship>(
                           '/admin/championships',
                           {
                             name: data.get('name'),
+                            type: data.get('type'),
                             stageKinds,
                           },
                         )
@@ -686,6 +692,21 @@ export function AdminPage({
                         maxLength={100}
                         required
                       />
+                    </label>
+                    <label className="flex flex-col gap-3 text-sm font-medium">
+                      Tipo de campeonato
+                      <select
+                        className="select select-bordered h-12 w-full text-base"
+                        name="type"
+                        defaultValue=""
+                        required
+                      >
+                        <option value="" disabled>
+                          Selecciona un tipo
+                        </option>
+                        <option value="COPA_AMERICA">Copa América</option>
+                        <option value="WORLD_CUP">Mundial</option>
+                      </select>
                     </label>
                     <fieldset className="space-y-4">
                       <legend className="text-sm font-medium">
